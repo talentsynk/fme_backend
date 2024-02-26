@@ -32,4 +32,6 @@ func init() {
 func GetDatabaseURL() string {
     return AppConfig.DatabaseURL
 }
+
+// Create functions for other env variables
  

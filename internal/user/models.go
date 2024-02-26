@@ -12,7 +12,7 @@ type User struct {
     PhoneNumber    string         `gorm:"unique;not null"`
     Email          string         `gorm:"unique;not null"`
     Password       string         `gorm:"not null"`
-    Address        string         `gorm:"not null"`
+    // Address        string         `gorm:"not null"`
     OTP            string         
     OTPExpiresAt   time.Time      
     
