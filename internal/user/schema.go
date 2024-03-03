@@ -1,9 +1,13 @@
 package myuser
 
 var UserCreateSchema struct {
-	FirstName string
-	LastName string
 	PhoneNumber string
+	Email string
+	Password string
+}
+
+
+var LoginSchema struct {
 	Email string
 	Password string
 }

@@ -14,8 +14,16 @@ func init() {
 func main() {
 	r := gin.Default()
 
-    fme := r.Group("/fme")
-    fme.POST("/create", myuser.CreateFme)
+    usergroup := r.Group("/user")
+    usergroup.POST("/createfme", myuser.CreateFmeUser)
+	usergroup.PATCH("/deactivate",myuser.RequireAuth, myuser.DeactivateUser)
+	usergroup.PATCH("/activate",myuser.RequireAuth, myuser.ActivateUser)
+	usergroup.PATCH("/suspend",myuser.RequireAuth, myuser.SuspendUser)
+	usergroup.POST("/login", myuser.Login)
+	usergroup.GET("/requestotp",myuser.RequireAuth,myuser.RequestOtp)
+
+
+	
 
     r.Run(":8080")
 }

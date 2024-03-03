@@ -9,6 +9,7 @@ import (
 type Config struct {
     // Configuration Variables 
     DatabaseURL string
+    HashSecret string
     
 }
 
@@ -24,6 +25,7 @@ func init() {
     // Initializing AppConfig with values from .env file
     AppConfig = &Config{
         DatabaseURL: os.Getenv("DATABASE_URL"),
+        HashSecret: os.Getenv("HASH_SECRET"),
         
     }
 }
@@ -31,6 +33,10 @@ func init() {
 // GetDatabaseURL returns the configured database URL
 func GetDatabaseURL() string {
     return AppConfig.DatabaseURL
+}
+
+func GetHashSecret() string {
+    return AppConfig.HashSecret
 }
 
 // Create functions for other env variables
