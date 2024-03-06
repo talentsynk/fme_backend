@@ -1,12 +1,12 @@
-package myuser
+package middleware
 
 import (
-	"fme_backend/internal/config"
+	"fme_backend/config"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-
+     model "fme_backend/user/models"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -38,7 +38,7 @@ func RequireAuth(c *gin.Context) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 		}
 		
-		var user User
+		var user model.User
 		config.DB.First(&user,"email = ?", claims["sub"])
 
 		if user.ID == 0 {

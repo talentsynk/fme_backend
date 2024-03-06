@@ -1,4 +1,4 @@
-package myuser
+package controller
 
 import (
 	//Inbuilt packages
@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
+    model "fme_backend/user/models"
+    
 	//Project packages
-	"fme_backend/internal/config"
-	"fme_backend/internal/utilities"
+	"fme_backend/config"
+	"fme_backend/utilities"
 
 	//External packages
 	"github.com/gin-gonic/gin"
@@ -20,8 +21,8 @@ import (
 // Create FME User
 func CreateFmeUser(c *gin.Context) {
 	//Read the request body and binds it to the schema variable
-	fmt.Println("coltroller started")
-	if c.Bind(&UserCreateSchema) != nil {
+	fmt.Println("controller started")
+	if c.Bind(&model.UserCreateSchema) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to read request body",
 		})
@@ -30,19 +31,19 @@ func CreateFmeUser(c *gin.Context) {
 	
 
 	// Check that the phone number is of the right syntax
-	if !utilities.IsNigerianPhoneNumber(UserCreateSchema.PhoneNumber){
+	if !utilities.IsNigerianPhoneNumber(model.UserCreateSchema.PhoneNumber){
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to read request body",
 		})
 		return
 	}
 
-	fmt.Println(UserCreateSchema.PhoneNumber)
+	fmt.Println(model.UserCreateSchema.PhoneNumber)
 
 
 	// Hash the password
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(model.UserCreateSchema.Password), 10)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to hash password",
@@ -53,10 +54,10 @@ func CreateFmeUser(c *gin.Context) {
 	fmt.Println("hash succesful")
 	// setup the user create instance
 
-	user:= User{
+	user:= model.User{
 		
-		PhoneNumber: UserCreateSchema.PhoneNumber,
-		Email: UserCreateSchema.Email,
+		PhoneNumber: model.UserCreateSchema.PhoneNumber,
+		Email: model.UserCreateSchema.Email,
 		Password: string(hash),
 		OTPExpiresAt: time.Now(),
 		IsMda: false,
@@ -89,7 +90,7 @@ func DeactivateUser(c *gin.Context) {
 	// Get User data from authentication token
 	userId ,_ := c.Get("userId")
 
-	var user User
+	var user model.User
 	result := config.DB.First(&user, userId)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -115,7 +116,7 @@ func SuspendUser(c *gin.Context) {
 		// Get User data from authentication token
 		userId ,_ := c.Get("userId")
 
-		var user User
+		var user model.User
 		result := config.DB.First(&user, userId)
 		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -140,7 +141,7 @@ func SuspendUser(c *gin.Context) {
 		// Get User data from authentication token
 		userId ,_ := c.Get("userId")
 
-		var user User
+		var user model.User
 		result := config.DB.First(&user, userId)
 		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -162,16 +163,16 @@ func SuspendUser(c *gin.Context) {
 
 // Login 
 func Login(c *gin.Context) {
-	var user User
+	var user model.User
 
-	if c.Bind(&LoginSchema) != nil {
+	if c.Bind(&model.LoginSchema) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to read request body",
 		})
 		return
 	}
 
-	config.DB.First(&user, "email = ?", LoginSchema.Email)
+	config.DB.First(&user, "email = ?", model.LoginSchema.Email)
 	if user.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Incorrect email",
@@ -179,7 +180,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(LoginSchema.Password))
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(model.LoginSchema.Password))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Incorrect Password",
@@ -216,7 +217,7 @@ func RequestOtp(c *gin.Context) {
 		// Get User data from authentication token
 		userId ,_ := c.Get("userId")
 
-		var user User
+		var user model.User
 		result := config.DB.First(&user, userId)
 		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})

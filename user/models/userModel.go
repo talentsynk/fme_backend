@@ -1,4 +1,4 @@
-package myuser
+package  model
 
 import (
     "gorm.io/gorm"
@@ -18,8 +18,5 @@ type User struct {
     IsFme bool `gorm:"not null"`
     IsStudent bool `gorm:"not null"`
     IsAdmin bool `gorm:"not null"`
-    ActivityStatus string `gorm:"not null"`
-    
-
-    
+    ActivityStatus string `gorm:"not null"`   
 }
