@@ -1,8 +1,8 @@
-package cmd
+package main
 
 import (
-	"fme_backend/config"
-	models  "fme_backend/user/models"
+	"fme_backend/internal/config"
+	"fme_backend/internal/user"
 )
 
 func init() {
@@ -12,6 +12,6 @@ func init() {
 func main() {
 	config.DB.AutoMigrate(
 		// Add all the migration structs here
-		&models.User{},
+		&myuser.User{},
 	)
 }

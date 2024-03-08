@@ -1,4 +1,4 @@
-package model
+package myuser
 
 var UserCreateSchema struct {
 	PhoneNumber string

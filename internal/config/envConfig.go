@@ -40,3 +40,4 @@ func GetHashSecret() string {
 }
 
 // Create functions for other env variables
+ 
