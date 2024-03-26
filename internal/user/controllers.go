@@ -20,7 +20,7 @@ import (
 // Create FME User
 func CreateFmeUser(c *gin.Context) {
 	//Read the request body and binds it to the schema variable
-	fmt.Println("coltroller started")
+	fmt.Println("controller started")
 	if c.Bind(&UserCreateSchema) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to read request body",
