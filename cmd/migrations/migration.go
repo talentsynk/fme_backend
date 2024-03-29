@@ -2,8 +2,8 @@ package main
 
 import (
 	"fme_backend/internal/config"
-	"fme_backend/internal/mda"
 	"fme_backend/internal/user"
+	"fme_backend/internal/mda"
 )
 
 func init() {
