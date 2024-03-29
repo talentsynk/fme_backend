@@ -13,6 +13,7 @@ func init() {
 func main() {
 	config.DB.AutoMigrate(
 		// Add all the migration structs here
-		&myuser.User{},&mda.Mda{},
+		&myuser.User{},
+		&mda.Mda{},
 	)
 }
