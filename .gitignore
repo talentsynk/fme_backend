@@ -30,5 +30,6 @@ go.work
 # db files
 *.db
 
+#ignore the config setup i have 
 internal/config
 
