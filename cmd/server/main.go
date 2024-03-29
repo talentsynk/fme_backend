@@ -19,6 +19,7 @@ func main() {
 
     usergroup := r.Group("/user")
     usergroup.POST("/createfme", myuser.CreateFmeUser)
+	usergroup.PATCH("/deactivate",middleware.RequireAuth, myuser.DeactivateUser)
 	usergroup.PATCH("/activate",middleware.RequireAuth, myuser.ActivateUser)
 	usergroup.PATCH("/suspend",middleware.RequireAuth, myuser.SuspendUser)
 	usergroup.POST("/login", myuser.Login)

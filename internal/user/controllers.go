@@ -37,6 +37,9 @@ func CreateFmeUser(c *gin.Context) {
 		return
 	}
 
+	fmt.Println(UserCreateSchema.PhoneNumber)
+
+
 	// Hash the password
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
@@ -47,16 +50,26 @@ func CreateFmeUser(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("hash succesful")
 	// setup the user create instance
+
 	user:= User{
 		
 		PhoneNumber: UserCreateSchema.PhoneNumber,
 		Email: UserCreateSchema.Email,
 		Password: string(hash),
 		OTPExpiresAt: time.Now(),
-		Role:1,
-		IsActive: true,
+		IsMda: false,
+		IsStc: false,
+		IsFme: true,
+		IsStudent: false,
+		IsAdmin: false,
+		ActivityStatus: "active",
+
+
 	}
+
+	fmt.Println(user)
 
 	result := config.DB.Create(&user)
 	if result.Error != nil {
@@ -71,122 +84,78 @@ func CreateFmeUser(c *gin.Context) {
 
 
 
+// Deactivate User
+func DeactivateUser(c *gin.Context) {
+	// Get User data from authentication token
+	userId ,_ := c.Get("userId")
+
+	var user User
+	result := config.DB.First(&user, userId)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+}
+	
+	user.ActivityStatus = "inactive"
+
+	result = config.DB.Save(&user)
+    if result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+        return
+    }
+
+	c.JSON(200, gin.H{"message": "User Deactivated successfully"})
+	
+}
+
+
+
 //Suspend the user
 func SuspendUser(c *gin.Context) {
-		// Receive the part parameter.
-		id:= c.Param("id")
-		if id == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "path parameter not provided",
-			})
-			return
-		}
-
-		// get the instance  
-		var instance User
-		instance_result := config.DB.First(&instance, id)
-		if instance_result.Error != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"message": "instance does not exist",
-			})
-			return
-		}
-
-		// get the user and confirm permission
-		userId ,userexists := c.Get("userId")
-		if !userexists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Problem with the authorization token",
-			})
-		}
+		// Get User data from authentication token
+		userId ,_ := c.Get("userId")
 
 		var user User
-		user_result := config.DB.First(&user, userId)
-		if user_result.Error != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Problem with authorization token",
-			})
+		result := config.DB.First(&user, userId)
+		if result.Error != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+    }
+	
+		user.ActivityStatus = "suspended"
+
+		result = config.DB.Save(&user)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
 		}
 
-
-		if !CanSuspendActivate(&user,&instance) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Only fmes can suspend",
-			})
-			return
-		}
-
-		// suspend the user
-		instance.IsActive = false
-		result:= config.DB.Save(&instance)
-		if result.Error !=nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Unable to update the user record",
-			})
-			return
-		}
-
-		c.JSON(200, gin.H{"message": "User suspended successfully"})
+		c.JSON(200, gin.H{"message": "User Suspended successfully"})
 	}
+
 
 
 // Activate User
-func ActivateUser(c *gin.Context) {
-		// Receive the part parameter.
-	id:= c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "path parameter not provided",
-		})
-		return
-	}
+	func ActivateUser(c *gin.Context) {
+		// Get User data from authentication token
+		userId ,_ := c.Get("userId")
 
-	// get the instance  
-	var instance User
-	instance_result := config.DB.First(&instance, id)
-	if instance_result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "instance does not exist",
-		})
-		return
-	}
+		var user User
+		result := config.DB.First(&user, userId)
+		if result.Error != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+    }
+	
+		user.ActivityStatus = "active"
 
-	// get the user and confirm permission
-	userId ,userexists := c.Get("userId")
-	if !userexists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
-		})
-	}
+		result = config.DB.Save(&user)
+		if result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+			return
+		}
 
-	var user User
-	user_result := config.DB.First(&user, userId)
-	if user_result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with authorization token",
-		})
-		return
-	}
-
-	if !CanSuspendActivate(&user,&instance) {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Only fmes can suspend",
-		})
-		return
-	}
-
-	// activate the user
-	instance.IsActive = true
-	result:= config.DB.Save(&instance)
-	if result.Error !=nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Unable to update the user record",
-		})
-		return
-	}
-
-	c.JSON(200, gin.H{"message": "User activated successfully"})
+		c.JSON(200, gin.H{"message": "User Suspended successfully"})
 	}
 	
 
@@ -194,41 +163,30 @@ func ActivateUser(c *gin.Context) {
 // Login 
 func Login(c *gin.Context) {
 	var user User
-	// receive the request body
+
 	if c.Bind(&LoginSchema) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Incorrect request schema",
+			"error": "Failed to read request body",
 		})
 		return
 	}
 
-	// get the user record
-	config.DB.Where("email= ?", LoginSchema.Email).First(&user)
+	config.DB.First(&user, "email = ?", LoginSchema.Email)
 	if user.ID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Incorrect email details",
+			"error": "Incorrect email",
 		})
 		return
 	}
 
-	// check if the user is active
-	if !user.IsActive {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Suspended User",
-		})
-		return
-	}
-
-	// compare the passwords
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(LoginSchema.Password))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Incorrect login details",
+			"error": "Incorrect Password",
 		})
 		return
 	}
 
-	// generate the jwt token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.Email,
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
@@ -239,7 +197,7 @@ func Login(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Unable to authenticate this user",
+			"error": "Failed to create token",
 		})
 		return
 	}
@@ -248,8 +206,6 @@ func Login(c *gin.Context) {
 		"jwt":        tokenString,
 		"token_type": "Bearer",
 		"expires_in": 86400, //time in seconds
-		"message": "succesful login",
-		"role":user.Role,
 	})
 }
 

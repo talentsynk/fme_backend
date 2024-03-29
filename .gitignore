@@ -29,14 +29,3 @@ go.work
 
 # db files
 *.db
-
-# go mod file
-go.mod
-
-# dockerfile
-dockerfile
-
-#config file
-internal/config
-
-
