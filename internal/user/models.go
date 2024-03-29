@@ -1,8 +1,12 @@
 package myuser
 
 import (
-    "gorm.io/gorm"
-    "time"
+	mda "fme_backend/internal/mdas"
+	"fme_backend/internal/stc"
+	"fme_backend/internal/student"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -13,10 +17,10 @@ type User struct {
     Password       string         `gorm:"not null"`
     OTP            string         
     OTPExpiresAt   time.Time   
-    IsMda bool `gorm:"not null"`
-    IsStc bool  `gorm:"not null"`
-    IsFme bool `gorm:"not null"`
-    IsStudent bool `gorm:"not null"`
-    IsAdmin bool `gorm:"not null"`
-    ActivityStatus string `gorm:"not null"`    
+    OTPVerified bool 
+    Role int `gorm:"not null"`
+    IsActive bool `gorm:"not null"`
+    Mdas mda.Mda
+    Students student.Student
+    Stcs stc.Stc
 }

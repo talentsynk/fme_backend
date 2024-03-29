@@ -19,11 +19,12 @@ func main() {
 
     usergroup := r.Group("/user")
     usergroup.POST("/createfme", myuser.CreateFmeUser)
-	usergroup.PATCH("/deactivate",middleware.RequireAuth, myuser.DeactivateUser)
-	usergroup.PATCH("/activate",middleware.RequireAuth, myuser.ActivateUser)
-	usergroup.PATCH("/suspend",middleware.RequireAuth, myuser.SuspendUser)
+	usergroup.GET("/activate/:id",middleware.RequireAuth, myuser.ActivateUser)
+	usergroup.GET("/suspend/:id",middleware.RequireAuth, myuser.SuspendUser)
 	usergroup.POST("/login", myuser.Login)
-	usergroup.GET("/requestotp",middleware.RequireAuth,myuser.RequestOtp)
+	usergroup.POST("/otp/request",myuser.RequestOtp)
+	usergroup.POST("/otp/verify" ,myuser.VerifyOtp)
+	usergroup.POST("/changepassword" ,myuser.ChangePassword)
 
     mdagroup := r.Group("/mda")
 	mdagroup.POST("/create-mda", middleware.RequireAuth,  mda.CreateMda)
