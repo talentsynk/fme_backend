@@ -1,9 +1,9 @@
-package stc
+package student
 
 import "gorm.io/gorm"
 
-type Stc struct {
-	//complete it
+type Student struct {
+	// complete it
 	gorm.Model
 	UserID uint
 	MdaID uint
