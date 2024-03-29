@@ -1,0 +1,15 @@
+This file contains the user roles and their description for this project
+Role = 0
+This stands for the admin or superuser (There is only one superuser)
+
+Role = 1
+This stands for the fme user 
+
+Role = 2 
+This stands for the mda user
+
+Role = 3
+this stands for the stc user
+
+Role = 4 
+this stands for the student user

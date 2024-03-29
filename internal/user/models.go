@@ -1,24 +1,29 @@
 package myuser
 
 import (
-    "gorm.io/gorm"
-    "time"
+	"fme_backend/internal/mda"
+	"fme_backend/internal/stc"
+	"fme_backend/internal/student"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 type User struct {
     gorm.Model
+    // think about about using a single role column and the effect on the
     
     PhoneNumber    string         `gorm:"unique;not null"`
     Email          string         `gorm:"unique;not null"`
     Password       string         `gorm:"not null"`
     OTP            string         
-    OTPExpiresAt   time.Time   
-    IsMda bool `gorm:"not null"`
-    IsStc bool  `gorm:"not null"`
-    IsFme bool `gorm:"not null"`
-    IsStudent bool `gorm:"not null"`
-    IsAdmin bool `gorm:"not null"`
-    ActivityStatus string `gorm:"not null"`
+    OTPExpiresAt   time.Time 
+    OTPVerified bool 
+    Role int `gorm:"not null"`
+    IsActive bool `gorm:"not null"`
+    Mdas mda.Mda
+    Stcs stc.Stc
+    Students student.Student
     
 
     

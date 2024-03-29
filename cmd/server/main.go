@@ -16,14 +16,13 @@ func main() {
 
     usergroup := r.Group("/user")
     usergroup.POST("/createfme", myuser.CreateFmeUser)
-	usergroup.PATCH("/deactivate",myuser.RequireAuth, myuser.DeactivateUser)
-	usergroup.PATCH("/activate",myuser.RequireAuth, myuser.ActivateUser)
-	usergroup.PATCH("/suspend",myuser.RequireAuth, myuser.SuspendUser)
 	usergroup.POST("/login", myuser.Login)
-	usergroup.GET("/requestotp",myuser.RequireAuth,myuser.RequestOtp)
+	usergroup.GET("/activate/:id",myuser.RequireAuth, myuser.ActivateUser)
+	usergroup.GET("/suspend/:id",myuser.RequireAuth, myuser.SuspendUser)
+	usergroup.POST("/otp/request" ,myuser.RequestOtp)
+	usergroup.POST("/otp/verify" ,myuser.VerifyOtp)
+	usergroup.POST("/changepassword" ,myuser.ChangePassword)
 
-
-	
 
     r.Run(":8080")
 }

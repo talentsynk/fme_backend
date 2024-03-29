@@ -4,14 +4,13 @@ import (
 	"fme_backend/internal/config"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
-
-
 
 // This is the middleware that accepts the authorization token and uses it to set the user id parameter if token is valid
 func RequireAuth(c *gin.Context) {
@@ -21,7 +20,7 @@ func RequireAuth(c *gin.Context) {
 	}
 
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	secret := config.GetHashSecret()
+	secret := os.Getenv("HASH_SECRET")
 
 	token, _ := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
