@@ -31,5 +31,5 @@ go.work
 *.db
 
 #ignore the config setup i have 
-internal/config
+internal/config/envConfig.go
 
