@@ -29,3 +29,5 @@ go.work
 
 # db files
 *.db
+
+internal/config
