@@ -20,8 +20,8 @@ func main() {
     usergroup := r.Group("/user")
     usergroup.POST("/createfme", myuser.CreateFmeUser)
 	usergroup.PATCH("/deactivate",middleware.RequireAuth, myuser.DeactivateUser)
-	usergroup.PATCH("/activate",middleware.RequireAuth, myuser.ActivateUser)
-	usergroup.PATCH("/suspend",middleware.RequireAuth, myuser.SuspendUser)
+	usergroup.PATCH("/activate/:id",middleware.RequireAuth, myuser.ActivateUser)
+	usergroup.PATCH("/suspend/:id",middleware.RequireAuth, myuser.SuspendUser)
 	usergroup.POST("/login", myuser.Login)
 	usergroup.GET("/requestotp",middleware.RequireAuth,myuser.RequestOtp)
 
@@ -34,6 +34,8 @@ func main() {
 	mdagroup.GET("/get-total-number-mda", middleware.RequireAuth, mda.TotalNumberOfMda)
 	mdagroup.GET("/get-total-isactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
 	mdagroup.GET("/get-total-inactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
+	mdagroup.PATCH("/suspend/:id", middleware.RequireAuth, mda.SuspendMda)
+	mdagroup.PATCH("/activate/:id", middleware.RequireAuth, mda.ActivateMda)
 
-    r.Run(":8000")
+    r.Run(":8080")
 }

@@ -65,8 +65,6 @@ func CreateFmeUser(c *gin.Context) {
 		IsStudent: false,
 		IsAdmin: false,
 		ActivityStatus: "active",
-
-
 	}
 
 	fmt.Println(user)
@@ -148,8 +146,7 @@ func SuspendUser(c *gin.Context) {
     }
 	
 		user.ActivityStatus = "active"
-
-		result = config.DB.Save(&user)
+     	result = config.DB.Save(&user)
 		if result.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 			return
