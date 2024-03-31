@@ -1,10 +1,19 @@
-package stc
+package
+import (
+	"gorm.io/gorm"
+)
 
-import "gorm.io/gorm"
-
-type Stc struct {
-	//complete it
+type Stc struct{
 	gorm.Model
-	UserID uint
-	MdaID uint
+
+	ID uint
+	Ownership                    string  `gorm:"unique;not null"`
+	CentreCode                   string  `gorm:"unique;not null"`
+	Name                         string  `gorm:"unique;not null"`
+	LocalGovernment              string  `gorm:"unique;not null"`
+	State                        string  `gorm:"unique;not null"`
+	isOperational                string  `gorm:"unique;not null"`
+	CertificateOfOperationURL    string `gorm:"unique;not null"`
+	MdaID                        uint
+	UserID                       uint	
 }

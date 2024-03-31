@@ -49,11 +49,15 @@ func CreateFmeUser(c *gin.Context) {
 		PhoneNumber: UserCreateSchema.PhoneNumber,
 		Email: UserCreateSchema.Email,
 		Password: string(hash),
-		OTPExpiresAt: time.Now(),
+    OTPExpiresAt: time.Now(),
+		IsMda: false,
+		IsStc: false,
+		IsFme: true,
+		IsStudent: false,
+		IsAdmin: false,
+		ActivityStatus: "active"
 		Role:1,
 		IsActive: true,
-
-
 	}
 
 	result := config.DB.Create(&user)
@@ -136,34 +140,49 @@ func ActivateUser(c *gin.Context) {
 		})
 		return
 	}
+  
+// 		var user User
+// 		result := config.DB.First(&user, userId)
+// 		if result.Error != nil {
+// 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+// 			return
+//     }
+	
+// 		user.ActivityStatus = "active"
+//      	result = config.DB.Save(&user)
+// 		if result.Error != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+// 			return
+// 		}
 
 	// get the instance  
-	var instance User
-	instance_result := config.DB.First(&instance, id)
-	if instance_result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "instance does not exist",
-		})
-		return
-	}
+// 	var instance User
+// 	instance_result := config.DB.First(&instance, id)
+// 	if instance_result.Error != nil {
+// 		c.JSON(http.StatusNotFound, gin.H{
+// 			"message": "instance does not exist",
+// 		})
+// 		return
+// 	}
 
-	// get the user and confirm permission
-	userId ,userexists := c.Get("userID")
-	if !userexists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
-		})
-		return
-	}
+// 	// get the user and confirm permission
+// 	userId ,userexists := c.Get("userID")
+// 	if !userexists {
+// 		c.JSON(http.StatusUnauthorized, gin.H{
+// 			"message": "Problem with the aithorization token",
+// 		})
+// 		return
+// 	}
 
-	var user User
-	user_result := config.DB.First(&user, userId)
-	if user_result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with authorization token",
-		})
-		return
-	}
+// 	var user User
+// 	user_result := config.DB.First(&user, userId)
+// 	if user_result.Error != nil {
+// 		c.JSON(http.StatusUnauthorized, gin.H{
+// 			"message": "Problem with authorization token",
+// 		})
+// 		return
+// 	}
+
 
 	if !CanSuspendActivate(&user,&instance) {
 		c.JSON(http.StatusUnauthorized, gin.H{

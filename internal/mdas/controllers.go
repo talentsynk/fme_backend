@@ -169,3 +169,61 @@ func UpdateMda(c *gin.Context) {
 
     c.JSON(http.StatusOK, mda)
 }
+
+
+
+
+func SuspendMda( c *gin.Context){
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error":"Mda ID is required"})
+        return
+    }
+
+    var mda Mda
+ if err := config.DB.First(&mda, id).Error; err != nil {
+    if errors.Is(err, gorm.ErrRecordNotFound){
+        c.JSON(http.StatusNotFound, gin.H{"error":"Mda not  found"})
+    }else {
+        c.JSON(http.StatusInternalServerError, gin.H{"error":"Internal Server Error"})
+    }
+    return
+ }
+
+    mda.IsActive = false
+
+    if err := config.DB.Save(&mda).Error; err != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to suspend Mda"})
+    }
+    c.JSON(200, gin.H{"message":"Mda Suspend successfully"})
+
+}
+
+
+
+
+func ActivateMda( c *gin.Context){
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error":"Mda ID is required"})
+        return
+    }
+
+    var mda Mda
+ if err := config.DB.First(&mda, id).Error; err != nil {
+    if errors.Is(err, gorm.ErrRecordNotFound){
+        c.JSON(http.StatusNotFound, gin.H{"error":"Mda not  found"})
+    }else {
+        c.JSON(http.StatusInternalServerError, gin.H{"error":"Internal Server Error"})
+    }
+    return
+ }
+
+    mda.IsActive = true
+
+    if err := config.DB.Save(&mda).Error; err != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to activate Mda"})
+    }
+    c.JSON(200, gin.H{"message":"Mda Activate successfully"})
+
+}
