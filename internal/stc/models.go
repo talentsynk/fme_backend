@@ -1,5 +1,4 @@
-package stc
-
+package
 import (
 	"gorm.io/gorm"
 )
@@ -16,6 +15,5 @@ type Stc struct{
 	isOperational                string  `gorm:"unique;not null"`
 	CertificateOfOperationURL    string `gorm:"unique;not null"`
 	MdaID                        uint
-	UserID                       uint
-	
+	UserID                       uint	
 }

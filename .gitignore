@@ -29,3 +29,7 @@ go.work
 
 # db files
 *.db
+
+dockerfile
+
+/internal/config/envConfig.go
