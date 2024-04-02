@@ -24,6 +24,15 @@ func CreateFmeUser(c *gin.Context) {
 		})
 		return
 	}
+
+	var userCheck User
+	config.DB.Where("email= ?", LoginSchema.Email).First(&userCheck)
+	if userCheck.ID != 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "User already exists",
+		})
+		return
+	}
 	
 
 	// Check that the phone number is of the right syntax
