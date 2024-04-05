@@ -5,6 +5,7 @@ import (
 	myuser "fme_backend/internal/user"
 	 mda "fme_backend/internal/mdas"
 	 middleware "fme_backend/internal/middlewares"
+	 stc "fme_backend/internal/stc"
 
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,11 @@ func main() {
 	mdagroup.GET("/get-total-number-mda", middleware.RequireAuth, mda.TotalNumberOfMda)
 	mdagroup.GET("/get-total-isactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
 	mdagroup.GET("/get-total-inactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
+
+    
+     stcgroup := r.Group("/stc")
+	 stcgroup.POST("/create-stc", middleware.ExtractMdaID, middleware.RequireAuth, stc.CreateStc)
+
 
     r.Run(":8000")
 }

@@ -17,3 +17,6 @@ import (
 		  log.Fatal("Error to connect to database")
 	  }
   }
+
+
+
