@@ -2,12 +2,14 @@ package main
 
 import (
 	"fme_backend/internal/config"
+	mda "fme_backend/internal/mdas"
+	middleware "fme_backend/internal/middlewares"
 	myuser "fme_backend/internal/user"
-	 mda "fme_backend/internal/mdas"
-	 middleware "fme_backend/internal/middlewares"
-	 stc "fme_backend/internal/stc"
+	stc "fme_backend/internal/stc"
 
-
+	"time"
+  
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,6 +19,16 @@ func init() {
 
 func main() {
 	r := gin.Default()
+
+	config := cors.Config{
+		AllowAllOrigins: true,
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:   []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	  }
+	r.Use(cors.New(config))
 
     usergroup := r.Group("/user")
     usergroup.POST("/createfme", myuser.CreateFmeUser)

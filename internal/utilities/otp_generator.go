@@ -12,8 +12,8 @@ func GenerateOtp() string {
     source := rand.NewSource(time.Now().UnixNano())
     rng := rand.New(source)
 
-    // Generate a random 4-digit number
-    otp := rng.Intn(1000000)
+    // Generate a random 5-digit number
+    otp := rng.Intn(100000)
     otpString := fmt.Sprintf("%05d", otp)
 
     return otpString

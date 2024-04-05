@@ -31,5 +31,3 @@ go.work
 *.db
 
 dockerfile
-
-/internal/config/envConfig.go

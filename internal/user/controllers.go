@@ -24,6 +24,15 @@ func CreateFmeUser(c *gin.Context) {
 		})
 		return
 	}
+
+	var userCheck User
+	config.DB.Where("email= ?", LoginSchema.Email).First(&userCheck)
+	if userCheck.ID != 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "User already exists",
+		})
+		return
+	}
 	
 
 	// Check that the phone number is of the right syntax
@@ -390,4 +399,112 @@ func ChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Password changed succesfully",
 	})
+}
+
+func CreateMdaUser(phoneNumber, Email, Password string) (bool,string,uint){
+	var userCheck User
+	config.DB.Where("email= ?", Email).First(&userCheck)
+	if userCheck.ID != 0 {
+		
+		return false,"user already exists",0
+	}
+
+	// Hash the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
+	if err != nil {
+	
+		return false, "Unable to hash password",0
+	}
+
+	// setup the user create instance
+	user:= User{
+		
+		PhoneNumber: UserCreateSchema.PhoneNumber,
+		Email: UserCreateSchema.Email,
+		Password: string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:2,
+		IsActive: true,
+	}
+
+	result := config.DB.Create(&user)
+	if result.Error != nil {
+		return false,"failed to create user",0
+	}
+
+
+
+	return true, "user created succesfully",user.ID
+}
+
+func CreateStcUser(phoneNumber, Email, Password string) (bool,string,uint){
+	var userCheck User
+	config.DB.Where("email= ?", Email).First(&userCheck)
+	if userCheck.ID != 0 {
+		
+		return false,"user already exists",0
+	}
+
+	// Hash the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
+	if err != nil {
+	
+		return false, "Unable to hash password",0
+	}
+
+	// setup the user create instance
+	user:= User{
+		
+		PhoneNumber: UserCreateSchema.PhoneNumber,
+		Email: UserCreateSchema.Email,
+		Password: string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:3,
+		IsActive: true,
+	}
+
+	result := config.DB.Create(&user)
+	if result.Error != nil {
+		return false,"failed to create user",0
+	}
+
+
+
+	return true, "user created succesfully",user.ID
+}
+
+func CreateStudentUser(phoneNumber, Email, Password string) (bool,string,uint){
+	var userCheck User
+	config.DB.Where("email= ?", Email).First(&userCheck)
+	if userCheck.ID != 0 {
+		
+		return false,"user already exists",0
+	}
+
+	// Hash the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
+	if err != nil {
+	
+		return false, "Unable to hash password",0
+	}
+
+	// setup the user create instance
+	user:= User{
+		
+		PhoneNumber: UserCreateSchema.PhoneNumber,
+		Email: UserCreateSchema.Email,
+		Password: string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:4,
+		IsActive: true,
+	}
+
+	result := config.DB.Create(&user)
+	if result.Error != nil {
+		return false,"failed to create user",0
+	}
+
+
+
+	return true, "user created succesfully",user.ID
 }
