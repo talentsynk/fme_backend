@@ -9,6 +9,7 @@ import (
 
 var DB *gorm.DB
 
+
 func ConnectToDb() {
 	var err error
 	DB, err = gorm.Open(postgres.Open(GetDatabaseURL()), &gorm.Config{})
@@ -17,3 +18,4 @@ func ConnectToDb() {
 		log.Fatal("Error to connect to database")
 	}
 }
+
