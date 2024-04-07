@@ -5,7 +5,6 @@ import "gorm.io/gorm"
 type Stc struct {
 	//complete it
 	gorm.Model
-	ID uint
 	Ownership                    string  `gorm:"unique;not null"`
 	CentreCode                   string  `gorm:"unique;not null"`
 	Name                         string  `gorm:"unique;not null"`

@@ -2,7 +2,9 @@ package   mda
 
 
 var MdaCreateSchema struct {
-	Name         string 
-	AgencyCode   string 
+	RegisterName       string 
+	Email              string 
+	Address            string 
+	StateOfOperation   string  
 }
 

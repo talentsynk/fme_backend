@@ -5,7 +5,9 @@ import (
 	"fme_backend/internal/config"
 	"fmt"
 	"net/http"
-    "github.com/gin-gonic/gin"
+	"sort"
+
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -26,8 +28,10 @@ func CreateMda(c *gin.Context) {
     }
 
     mda := Mda{
-        Name:       MdaCreateSchema.Name,
-        AgencyCode: MdaCreateSchema.AgencyCode,
+        RegisterName:  MdaCreateSchema.RegisterName,
+        Email:    MdaCreateSchema.Email,
+        Address: MdaCreateSchema.Address,
+        StateOfOperation: MdaCreateSchema.StateOfOperation,
         IsActive:   true,
         UserID:     userID.(uint),
     }
@@ -168,4 +172,43 @@ func UpdateMda(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, mda)
+}
+
+
+
+
+
+
+func FilterMdaAscending(c *gin.Context) {
+    var mdas []Mda
+    if result := config.DB.Find(&mdas); result.Error != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    // Sort MDAs by name in ascending order
+    sort.Slice(mdas, func(i, j int) bool {
+        return mdas[i].RegisterName < mdas[j].RegisterName
+    })
+
+    // Send the sorted MDAs as the response
+    c.JSON(http.StatusOK, gin.H{"mdas": mdas})
+}
+
+
+
+func FilterMdaDescending(c *gin.Context) {
+    var mdas []Mda
+    if result := config.DB.Find(&mdas); result.Error != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    // Sort MDAs by name in ascending order
+    sort.Slice(mdas, func(i, j int) bool {
+        return mdas[i].RegisterName > mdas[j].RegisterName
+    })
+
+    // Send the sorted MDAs as the response
+    c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
