@@ -48,9 +48,11 @@ func main() {
 	mdagroup.GET("/get-mda/:id", middleware.RequireAuth, mda.GetMdaByID)
 	mdagroup.GET("/get-total-number-mda", middleware.RequireAuth, mda.TotalNumberOfMda)
 	mdagroup.GET("/get-total-isactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
-	mdagroup.GET("/get-total-inactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
+	mdagroup.GET("/get-total-inactive-mda", middleware.RequireAuth, mda.TotalNumberOfInActiveMda)
     mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
     mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
+	mdagroup.PATCH("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
+	mdagroup.PATCH("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
     
      stcgroup := r.Group("/stc")
 	 stcgroup.POST("/create-stc", middleware.ExtractMdaID, middleware.RequireAuth, stc.CreateStc)
@@ -63,5 +65,7 @@ func main() {
 	 stcgroup.GET("/get-total-inactive-mda", middleware.RequireAuth, stc.TotalNumberOfInOperationalStc)
      stcgroup.GET("/get-ascending-stc", middleware.RequireAuth, stc.FilterStcAscending)
      stcgroup.GET("/get-descending-stc", middleware.RequireAuth, stc.FilterStcDescending)
+	 stcgroup.PATCH("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
+	 stcgroup.PATCH("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
     r.Run(":8000")
 }
