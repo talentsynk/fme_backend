@@ -185,7 +185,7 @@ func UpdateStc(c *gin.Context) {
 
 
 
-func FilterStcAscending(c *gin.Context) {
+func FilterStcDescending(c *gin.Context) {
     var stcs []Stc
     if result := config.DB.Find(&stcs); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
@@ -202,7 +202,7 @@ func FilterStcAscending(c *gin.Context) {
 }
 
 
-func FilterStcDescending(c *gin.Context) {
+func FilterStcAscending(c *gin.Context) {
     var stcs []Stc
     if result := config.DB.Find(&stcs); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
@@ -216,4 +216,63 @@ func FilterStcDescending(c *gin.Context) {
 
     // Send the sorted MDAs as the response
     c.JSON(http.StatusOK, gin.H{"stcs": stcs})
+}
+
+
+
+
+func SuspendStc(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+        return
+    }
+
+    var stc Stc
+    if err := config.DB.First(&stc, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+        return
+    }
+
+    stc.isOperational = false 
+
+    if err := config.DB.Save(&stc).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"suspend":"Stc  Suspended"})
+}
+
+
+
+func ActivateStc(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+        return
+    }
+
+    var stc Stc
+    if err := config.DB.First(&stc, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+        return
+    }
+
+    stc.isOperational = true 
+
+    if err := config.DB.Save(&stc).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate STC"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"Activate":"STC Activated"})
 }
