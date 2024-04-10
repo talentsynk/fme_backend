@@ -41,7 +41,7 @@ func main() {
     usergroup.POST("/create-mda-user", myuser.CreateMdaUser) 
 
     mdagroup := r.Group("/mda")
-	mdagroup.POST("/create-mda", middleware.RequireAuth,  mda.CreateMda)
+	mdagroup.POST("/create-mda",middleware.RequireAuth, mda.CreateMda)
 	mdagroup.GET("/get-all-mdas", middleware.RequireAuth, mda.GetMdas)
 	mdagroup.GET("/search-mda", middleware.RequireAuth, mda.SearchMda)
 	mdagroup.PATCH("/update-mda/:id", middleware.RequireAuth, mda.UpdateMda)

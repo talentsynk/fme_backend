@@ -1,0 +1,62 @@
+{
+    "mdas": [
+        {
+            "ID": 1,
+            "CreatedAt": "2024-03-18T16:37:34+01:00",
+            "UpdatedAt": "2024-03-31T18:36:51+01:00",
+            "DeletedAt": null,
+            "RegisterName": "",
+            "Email": "",
+            "Address": "",
+            "StateOfOperation": "",
+            "IsActive": true
+            
+        },
+        {
+            "ID": 2,
+            "CreatedAt": "2024-03-31T18:27:50+01:00",
+            "UpdatedAt": "2024-03-31T18:31:53+01:00",
+            "DeletedAt": null,
+            "RegisterName": "",
+            "Email": "",
+            "Address": "",
+            "StateOfOperation": "",
+            "IsActive": true
+        
+        },
+        {
+            "ID": 3,
+            "CreatedAt": "2024-04-07T11:20:40+01:00",
+            "UpdatedAt": "2024-04-07T11:20:40+01:00",
+            "DeletedAt": null,
+            "RegisterName": "Yusuf Ventures",
+            "Email": "yusufventures",
+            "Address": "9,Larinde Qudus, Aboru Iyana Ipaja",
+            "StateOfOperation": "Lagos",
+            "IsActive": true
+        },
+        {
+            "ID": 4,
+            "CreatedAt": "2024-04-08T10:14:10+01:00",
+            "UpdatedAt": "2024-04-08T11:04:38+01:00",
+            "DeletedAt": null,
+            "RegisterName": "aniki Ventures",
+            "Email": "anikiventures",
+            "Address": " 90, Adebiyi street Shomolu",
+            "StateOfOperation": "Lagos",
+            "IsActive": false
+           
+        },
+        {
+            "ID": 5,
+            "CreatedAt": "2024-04-10T08:30:44+01:00",
+            "UpdatedAt": "2024-04-10T08:30:44+01:00",
+            "DeletedAt": null,
+            "RegisterName": "Ogunsspa",
+            "Email": "Ogunsspa@gmail.com",
+            "Address": " 1, Alade street Shomolu",
+            "StateOfOperation": "Lagos",
+            "IsActive": true
+        }
+    ]
+}
