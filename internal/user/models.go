@@ -1,9 +1,6 @@
 package myuser
 
 import (
-	mda "fme_backend/internal/mdas"
-	"fme_backend/internal/stc"
-	"fme_backend/internal/student"
 	"time"
 
 	"gorm.io/gorm"
@@ -20,7 +17,5 @@ type User struct {
     OTPVerified bool 
     Role int `gorm:"not null"`
     IsActive bool `gorm:"not null"`
-    Mdas mda.Mda
-    Students student.Student
-    Stcs stc.Stc
+
 }

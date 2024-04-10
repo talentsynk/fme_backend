@@ -2,8 +2,9 @@ package main
 
 import (
 	"fme_backend/internal/config"
-	"fme_backend/internal/user"
 	"fme_backend/internal/mdas"
+	"fme_backend/internal/student"
+	"fme_backend/internal/user"
 	"fme_backend/internal/stc"
 	
 )
@@ -17,6 +18,7 @@ func main() {
 		// Add all the migration structs here
 		&myuser.User{},
 		&mda.Mda{},
+		&student.Student{},
 		&stc.Stc{},
 		
 	)

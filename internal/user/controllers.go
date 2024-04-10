@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // Create FME User
@@ -401,138 +402,95 @@ func ChangePassword(c *gin.Context) {
 	})
 }
 
-func CreateMdaUser(c *gin.Context){
-        if c.Bind(&UserCreateSchema) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to read request body",
-		})
-		return
-	}
+func CreateMdaUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string,uint){
 	var userCheck User
-	config.DB.Where("email= ?",UserCreateSchema.Email).First(&userCheck)
+	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-		   
-		c.JSON(http.StatusInternalServerError, gin.H{
-            "error": "User already exists",
-        })
-        return
+	  return false, "user already exists", 0
 	}
-
-		// Check that the phone number is of the right syntax
-		if !utilities.IsNigerianPhoneNumber(UserCreateSchema.PhoneNumber){
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Failed to read request body",
-			})
-			return
-		}
+  
 	// Hash the password
-	
-	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-            "error": "Unable to hash password",
-        })
-		return
+	  return false, "Unable to hash password", 0
 	}
-
-	// setup the user create instance
-	user:= User{
-		
-		PhoneNumber: UserCreateSchema.PhoneNumber,
-		Email: UserCreateSchema.Email,
-		Password: string(hash),
-		OTPExpiresAt: time.Now(),
-		Role:2,
-		IsActive: true,
+  
+	// Setup the user create instance
+	user := User{
+	  PhoneNumber: phoneNumber,
+	  Email: email,
+	  Password: string(hash),
+	  OTPExpiresAt: time.Now(),
+	  Role: 2,
+	  IsActive: true,
 	}
-
-	result := config.DB.Create(&user)
+  
+	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-            "error": "Failed to create user",
-        })
-		return 
+	  return false, "failed to create user", 0
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-        "success": true,
-        "message": "User created successfully",
-        "userID":  user.ID,
-    })
-   
-	// return true, "user created succesfully",user.ID
+  
+	return true, "user created succesfully", user.ID
 }
 
-
-// STC Admin 
-func CreateStcUser(phoneNumber, Email, Password string) (bool,string,uint){
+func CreateStcUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string,uint){
 	var userCheck User
-	config.DB.Where("email= ?", Email).First(&userCheck)
+	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-		
-		return false,"user already exists",0
+	  return false, "user already exists", 0
 	}
-
+  
 	// Hash the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-	
-		return false, "Unable to hash password",0
+	  return false, "Unable to hash password", 0
 	}
-
-	// setup the user create instance
-	user:= User{
-		
-		PhoneNumber: UserCreateSchema.PhoneNumber,
-		Email: UserCreateSchema.Email,
-		Password: string(hash),
-		OTPExpiresAt: time.Now(),
-		Role:3,
-		IsActive: true,
+  
+	// Setup the user create instance
+	user := User{
+	  PhoneNumber: phoneNumber,
+	  Email: email,
+	  Password: string(hash),
+	  OTPExpiresAt: time.Now(),
+	  Role: 3,
+	  IsActive: true,
 	}
-
-	result := config.DB.Create(&user)
+  
+	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
-		return false,"failed to create user",0
+	  return false, "failed to create user", 0
 	}
-
-
-
-	return true, "user created succesfully",user.ID
+  
+	return true, "user created succesfully", user.ID
 }
 
-func CreateStudentUser(phoneNumber, Email, Password string) (bool,string,uint){
+func CreateStudentUser(tx *gorm.DB, phoneNumber, email, password string) (bool, string, uint) {
 	var userCheck User
-	config.DB.Where("email= ?", Email).First(&userCheck)
+	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-		
-		return false,"user already exists",0
+	  return false, "user already exists", 0
 	}
-
+  
 	// Hash the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-	
-		return false, "Unable to hash password",0
+	  return false, "Unable to hash password", 0
 	}
-
-	// setup the user create instance
-	user:= User{
-		
-		PhoneNumber: UserCreateSchema.PhoneNumber,
-		Email: UserCreateSchema.Email,
-		Password: string(hash),
-		OTPExpiresAt: time.Now(),
-		Role:4,
-		IsActive: true,
+  
+	// Setup the user create instance
+	user := User{
+	  PhoneNumber: phoneNumber,
+	  Email: email,
+	  Password: string(hash),
+	  OTPExpiresAt: time.Now(),
+	  Role: 4,
+	  IsActive: true,
 	}
-
-	result := config.DB.Create(&user)
+  
+	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
-		return false,"failed to create user",0
+	  return false, "failed to create user", 0
 	}
-
-
-
-	return true, "user created succesfully",user.ID
-}
+  
+	return true, "user created succesfully", user.ID
+  }
