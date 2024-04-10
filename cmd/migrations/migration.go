@@ -5,6 +5,8 @@ import (
 	"fme_backend/internal/mdas"
 	"fme_backend/internal/student"
 	"fme_backend/internal/user"
+	"fme_backend/internal/stc"
+	
 )
 
 func init() {
@@ -17,6 +19,7 @@ func main() {
 		&myuser.User{},
 		&mda.Mda{},
 		&student.Student{},
+		&stc.Stc{},
 		
 	)
 }

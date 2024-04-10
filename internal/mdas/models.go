@@ -6,10 +6,10 @@ import (
 
 type Mda struct {
 	gorm.Model
-
-	ID         uint
-	Name       string `gorm:"unique;not null"`
-	AgencyCode string `gorm:"unique;not null"`
-	IsActive   bool   `gorm:"unique;not null"`
-	UserID     uint
+	RegisterName       string `gorm:"unique;not null"`
+	Email              string `gorm:"unique;not null"`
+	Address            string `gorm:"unique;not null"`
+	StateOfOperation   string `gorm:"unique;not null"`
+	IsActive           bool   `gorm:"unique;not null"`
+	UserID             uint
 }
