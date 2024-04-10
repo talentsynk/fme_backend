@@ -7,6 +7,8 @@ var UserCreateSchema struct {
 }
 
 
+
+
 var LoginSchema struct {
 	Email       string
 	Password    string

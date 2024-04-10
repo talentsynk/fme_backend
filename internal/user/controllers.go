@@ -401,19 +401,38 @@ func ChangePassword(c *gin.Context) {
 	})
 }
 
-func CreateMdaUser(phoneNumber, Email, Password string) (bool,string,uint){
+func CreateMdaUser(c *gin.Context){
+        if c.Bind(&UserCreateSchema) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to read request body",
+		})
+		return
+	}
 	var userCheck User
-	config.DB.Where("email= ?", Email).First(&userCheck)
+	config.DB.Where("email= ?",UserCreateSchema.Email).First(&userCheck)
 	if userCheck.ID != 0 {
-		
-		return false,"user already exists",0
+		   
+		c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "User already exists",
+        })
+        return
 	}
 
+		// Check that the phone number is of the right syntax
+		if !utilities.IsNigerianPhoneNumber(UserCreateSchema.PhoneNumber){
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Failed to read request body",
+			})
+			return
+		}
 	// Hash the password
-	hash, err := bcrypt.GenerateFromPassword([]byte(Password), 10)
-	if err != nil {
 	
-		return false, "Unable to hash password",0
+	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Unable to hash password",
+        })
+		return
 	}
 
 	// setup the user create instance
@@ -429,14 +448,23 @@ func CreateMdaUser(phoneNumber, Email, Password string) (bool,string,uint){
 
 	result := config.DB.Create(&user)
 	if result.Error != nil {
-		return false,"failed to create user",0
+		c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Failed to create user",
+        })
+		return 
 	}
 
-
-
-	return true, "user created succesfully",user.ID
+	c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "message": "User created successfully",
+        "userID":  user.ID,
+    })
+   
+	// return true, "user created succesfully",user.ID
 }
 
+
+// STC Admin 
 func CreateStcUser(phoneNumber, Email, Password string) (bool,string,uint){
 	var userCheck User
 	config.DB.Where("email= ?", Email).First(&userCheck)
