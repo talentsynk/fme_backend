@@ -21,15 +21,7 @@ func CreateStc(c *gin.Context){
 		})
 		return
 	}
-	 userID, exists := c.Get("userID")
-	 if !exists{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"UserID not found in Context"})
-	 }
-
-	 mdaID, exists := c.Get("mdaID")
-	 if !exists{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"mdaID not found in Context"})
-	 }
+	
 
 	stc := Stc{
 		Ownership:         StcCreateSchema.Ownership, 
@@ -39,8 +31,6 @@ func CreateStc(c *gin.Context){
 		State: 			   StcCreateSchema.State,
 		isOperational:     true,
 		CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
-		MdaID: mdaID.(uint),
-		UserID: userID.(uint),
 	}
 
 	fmt.Println(stc)
@@ -139,7 +129,7 @@ func SearchStc(c *gin.Context) {
     }
 
     var stcsearch []Stc
-    if err := config.DB.Where("name LIKE ? OR agency_code LIKE ?", "%"+query+"%", "%"+query+"%").Find(&stcsearch).Error; err != nil {
+    if err := config.DB.Where("ownership LIKE ? OR center_code LIKE ? OR name LIKE ? OR local_government ? OR state LIKE ? OR LIKE certificate_of_operational_url", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         return
     }
