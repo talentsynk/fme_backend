@@ -39,7 +39,7 @@ func main() {
 	usergroup.POST("/otp/request",myuser.RequestOtp)
 	usergroup.POST("/otp/verify" ,myuser.VerifyOtp)
 	usergroup.POST("/changepassword" ,myuser.ChangePassword)
-    usergroup.POST("/create-mda-user", myuser.CreateMdaUser) 
+    // usergroup.POST("/create-mda-user", myuser.CreateMdaUser) 
 
     mdagroup := r.Group("/mda")
 	mdagroup.POST("/create-mda", middleware.RequireAuth,  mda.CreateMda)
