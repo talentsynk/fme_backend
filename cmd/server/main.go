@@ -4,6 +4,7 @@ import (
 	"fme_backend/internal/config"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
+	"fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
 	"time"
 
@@ -46,6 +47,14 @@ func main() {
 	mdagroup.GET("/get-total-number-mda", middleware.RequireAuth, mda.TotalNumberOfMda)
 	mdagroup.GET("/get-total-isactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
 	mdagroup.GET("/get-total-inactive-mda", middleware.RequireAuth, mda.TotalNumberOfActiveMda)
+
+	studentgroup:= r.Group("/student")
+	studentgroup.POST("/create-fme",student.CreateFmeStudent)
+	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
+	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
+	studentgroup.GET("/all-fme",middleware.RequireFme,student.GetAllStudents)
+	studentgroup.GET("/fme/:id",middleware.RequireFme,student.GetStudent)
+
 
     r.Run(":8000")
 }

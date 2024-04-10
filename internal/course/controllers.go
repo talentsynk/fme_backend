@@ -3,6 +3,7 @@ package course
 import (
 	"fme_backend/internal/config"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -76,10 +77,18 @@ func CreateSector(c *gin.Context) {
 
 func GetCourse(c *gin.Context){
 	// GET ID
-	id:= c.Param("id")
-	if id == "" {
+	idStr:= c.Param("id")
+	if idStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter not provided",
+		})
+		return
+	}
+	// Convert id to string
+	id,err :=strconv.Atoi(idStr)
+	if err!= nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "path parameter invalid",
 		})
 		return
 	}

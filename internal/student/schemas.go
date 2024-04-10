@@ -6,4 +6,7 @@ var CreateStudentSchema struct {
 	Gender string
 	StateOfOrigin string
 	StateOfResidence string
+	Email string
+	PhoneNumber string
+	DOBstring string
 }
