@@ -21,11 +21,7 @@ func CreateMda(c *gin.Context) {
         return
     }
 
-    userID, exists := c.Get("userID") // Make sure this key matches what you set in the middleware
-    if !exists {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "UserID not found in context"})
-        return
-    }
+
 
     mda := Mda{
         RegisterName:  MdaCreateSchema.RegisterName,
@@ -33,7 +29,6 @@ func CreateMda(c *gin.Context) {
         Address: MdaCreateSchema.Address,
         StateOfOperation: MdaCreateSchema.StateOfOperation,
         IsActive:   true,
-        UserID:     userID.(uint),
     }
 
 	fmt.Println(mda)
