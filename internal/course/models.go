@@ -5,16 +5,14 @@ import "gorm.io/gorm"
 type Course struct {
 
 	gorm.Model
-	Name string `gorm:"unique;not null"`
+	Name        string `gorm:"unique;not null"`
 	Description string `gorm:"not null"`
-	SectorID uint
-
-
+	CategoryID  uint
 }
 
-type Sector struct {
+type Category struct {
 	gorm.Model
-	Name string `gorm:"unique;not null"`
+	Name        string `gorm:"unique;not null"`
 	Description string `gorm:"not null"`
-	Courses Course
+	Courses     Course
 }
