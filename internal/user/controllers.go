@@ -287,7 +287,7 @@ func RequestOtp(c *gin.Context) {
 
 	// generate otp and expiry time 
 	user.OTP = utilities.GenerateOtp()
-	user.OTPExpiresAt = time.Now().Add(time.Minute*3)
+	user.OTPExpiresAt = time.Now().Add(time.Minute*5)
 	result:= config.DB.Save(&user)
 	if result.Error !=nil {
 		c.JSON(http.StatusBadRequest, gin.H{
