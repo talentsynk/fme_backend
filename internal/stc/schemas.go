@@ -8,4 +8,6 @@ var StcCreateSchema  struct {
 	LocalGovernment              string  
 	State                        string  
 	CertificateOfOperationURL    string 
+	Email                        string 
+	Phone                        string
 }

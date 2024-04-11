@@ -10,8 +10,9 @@ type Stc struct {
 	Name                         string  `gorm:"unique;not null"`
 	LocalGovernment              string  `gorm:"unique;not null"`
 	State                        string  `gorm:"unique;not null"`
-	isOperational                bool    `gorm:"unique;not null"`
+	isOperational                bool   
 	CertificateOfOperationURL    string `gorm:"unique;not null"`
+	Fmestc                       bool
 	MdaID                        uint
 	UserID                       uint	
 }

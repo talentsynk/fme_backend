@@ -78,7 +78,7 @@ func CreateFmeStudent(c *gin.Context) {
         UserID: newUserID,
         Fmestudent: true,
     }
-
+     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
@@ -100,14 +100,14 @@ func CreateMdaStudent(c *gin.Context) {
 	mdaIDStr,exists := c.Get("mdaID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
+			"message": "Problem with the authorization token",
 		})
 		return
 	}
 	mdaID,ok := mdaIDStr.(uint)
 	if !ok{
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
+			"message": "Problem with the authorization token",
 		})
 		return
 	}
@@ -177,7 +177,7 @@ func CreateMdaStudent(c *gin.Context) {
         UserID: newUserID,
         MdaID: mdaID,
     }
-
+    fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
@@ -187,8 +187,7 @@ func CreateMdaStudent(c *gin.Context) {
         return
     }
 
-    tx.Commit() // Commit the transaction if both creations are successful
-    // Success response
+    tx.Commit() 
     c.JSON(http.StatusOK, gin.H{
         "message": "Student created successfully",
     })
@@ -199,14 +198,14 @@ func CreateStcStudent(c *gin.Context) {
 	stcIDStr,exists := c.Get("stcID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
+			"message": "Problem with the authorization token",
 		})
 		return
 	}
 	stcID,ok := stcIDStr.(uint)
 	if !ok{
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
+			"message": "Problem with the authorization token",
 		})
 		return
 	}
@@ -276,7 +275,7 @@ func CreateStcStudent(c *gin.Context) {
         UserID: newUserID,
         StcID: stcID,
     }
-
+    fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
