@@ -3,6 +3,8 @@ package stc
 import (
 	"errors"
 	"fme_backend/internal/config"
+    myuser "fme_backend/internal/user"
+    "fme_backend/internal/utilities"
 	"fmt"
 	"net/http"
 	"sort"
@@ -13,7 +15,7 @@ import (
 
 
 
-func CreateStc(c *gin.Context){
+func CreateFmeStc(c *gin.Context){
 	fmt.Println("controller started")
 	if c.BindJSON(&StcCreateSchema) != nil{
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -21,27 +23,124 @@ func CreateStc(c *gin.Context){
 		})
 		return
 	}
-	
+    state, result := utilities.ValidateState(StcCreateSchema.State)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Incorrect state of residence",
+        })
+        return
+    }
+  // Transaction Handling
+  tx := config.DB.Begin() // Begin a transaction
 
-	stc := Stc{
+  // Create user with transaction
+  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.Phone, StcCreateSchema.Email, "dfcv")
+  if !result {
+      tx.Rollback() // Rollback if user creation fails
+      c.JSON(http.StatusBadRequest, gin.H{
+          "error": message,
+      })
+      return
+  }
+  	stc := Stc{
 		Ownership:         StcCreateSchema.Ownership, 
 		CentreCode:        StcCreateSchema.CentreCode,
 		Name:              StcCreateSchema.Name,
 		LocalGovernment:   StcCreateSchema.LocalGovernment,
-		State: 			   StcCreateSchema.State,
+		State: 			   state,
 		isOperational:     true,
 		CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
-	}
+        UserID: newUserID,
+        Fmestc: true,
+    }
 
 	fmt.Println(stc)
-	if result := config.DB.Create(&stc); result.Error != nil{
-		c.JSON(http.StatusBadRequest, gin.H{"error":result.Error.Error()})
-	}
+    stcresult := tx.Create(&stc) // Create student within transaction
+    if stcresult.Error != nil {
+        tx.Rollback() // Rollback if student creation fails
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Failed to create User",
+        })
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{"message":"Stc created successfully"})
+    tx.Commit() // Commit the transaction if both creations are successful
+    // Success response
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Student created successfully",
+    })
 }
 
 
+func CreateMdaStc(c *gin.Context){
+    // retrieve the mda id
+    mdaIDStr,exists := c.Get("mdaID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+    mdaID,ok := mdaIDStr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+    if c.Bind(&StcCreateSchema) != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Failed to read request body",
+        })
+        return
+    }
+
+    state, result := utilities.ValidateState(StcCreateSchema.State)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Incorrect state of residence",
+        })
+        return
+    }
+     // Transaction Handling
+  tx := config.DB.Begin() // Begin a transaction
+
+  // Create user with transaction
+  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.Phone, StcCreateSchema.Email, "dfcv")
+  if !result {
+      tx.Rollback() // Rollback if user creation fails
+      c.JSON(http.StatusBadRequest, gin.H{
+          "error": message,
+      })
+      return
+  }
+
+  stc := Stc{
+    Ownership:         StcCreateSchema.Ownership, 
+    CentreCode:        StcCreateSchema.CentreCode,
+    Name:              StcCreateSchema.Name,
+    LocalGovernment:   StcCreateSchema.LocalGovernment,
+    State: 			   state,
+    isOperational:     true,
+    CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
+    UserID: newUserID,
+    MdaID: mdaID,
+}
+fmt.Println(stc)
+stcresult := tx.Create(&stc) // Create student within transaction
+if stcresult.Error != nil {
+    tx.Rollback() // Rollback if student creation fails
+    c.JSON(http.StatusBadRequest, gin.H{
+        "error": "Failed to create User",
+    })
+    return
+}
+
+tx.Commit() 
+c.JSON(http.StatusOK, gin.H{
+    "message": "Student created successfully",
+})
+}
 
 
 

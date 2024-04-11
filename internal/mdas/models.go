@@ -10,6 +10,5 @@ type Mda struct {
 	Email              string `gorm:"unique;not null"`
 	Address            string `gorm:"unique;not null"`
 	StateOfOperation   string `gorm:"unique;not null"`
-	IsActive           bool   `gorm:"unique;not null"`
 	UserID             uint
 }

@@ -3,10 +3,12 @@ package mda
 import (
 	"errors"
 	"fme_backend/internal/config"
+    myuser "fme_backend/internal/user"
 	"fmt"
 	"net/http"
 	"sort"
-
+    "strconv"
+    "fme_backend/internal/utilities"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -21,32 +23,69 @@ func CreateMda(c *gin.Context) {
         return
     }
 
-
+    stateOfOperation, result := utilities.ValidateState( MdaCreateSchema.StateOfOperation)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Incorrect state of origin",
+        })
+        return
+    }
+   // Transaction Handling
+   tx := config.DB.Begin() 
+   result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.Phone,MdaCreateSchema.Email, "dfcv")
+   if !result {
+       tx.Rollback() // Rollback if user creation fails
+       c.JSON(http.StatusBadRequest, gin.H{
+           "error": message,
+       })
+       return
+   }
 
     mda := Mda{
         RegisterName:  MdaCreateSchema.RegisterName,
-        Email:    MdaCreateSchema.Email,
         Address: MdaCreateSchema.Address,
-        StateOfOperation: MdaCreateSchema.StateOfOperation,
-        IsActive:   true,
+        StateOfOperation: stateOfOperation,
+        Email: MdaCreateSchema.Email,
+        UserID: newUserID,
     }
 
 	fmt.Println(mda)
-    if result := config.DB.Create(&mda); result.Error != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+    mdaresult := tx.Create(&mda) 
+    if mdaresult.Error != nil {
+        tx.Rollback() 
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Failed to create User",
+        })
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Mda created successfully"})
+    tx.Commit() 
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Mda created successfully",
+    })
 }
 
 
 
-func GetMdas(c *gin.Context){
+func GetAllMdas(c *gin.Context){
     fmt.Println("controller started")
+    limitStr := c.Query("limit")
+    pageStr  := c.Query("page")
 
+    limit, err := strconv.Atoi(limitStr)
+    if err != nil || limit <= 0{
+        limit = 10 
+    }
+
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page <= 0 {
+        page = 1
+    }
+
+    offset := (page - 1) * limit
+ 
     var mdas []Mda
-    if result := config.DB.Find(&mdas); result.Error != nil {
+    if result := config.DB.Limit(limit).Offset(offset).Find(&mdas); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
@@ -210,58 +249,58 @@ func FilterMdaAscending(c *gin.Context) {
 
 
 
-func SuspendMda(c *gin.Context) {
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
-        return
-    }
+// func SuspendMda(c *gin.Context) {
+//     id := c.Param("id")
+//     if id == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
+//         return
+//     }
 
-    var mda Mda
-    if err := config.DB.First(&mda, id).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-        return
-    }
+//     var mda Mda
+//     if err := config.DB.First(&mda, id).Error; err != nil {
+//         if errors.Is(err, gorm.ErrRecordNotFound) {
+//             c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
+//         } else {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+//         }
+//         return
+//     }
 
-    mda.IsActive = false // Assuming "suspend" means setting IsActive to false
+//     mda.IsActive = false // Assuming "suspend" means setting IsActive to false
 
-    if err := config.DB.Save(&mda).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Mda"})
-        return
-    }
+//     if err := config.DB.Save(&mda).Error; err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Mda"})
+//         return
+//     }
 
-    c.JSON(http.StatusOK, gin.H{"suspend":"Mda Suspended"})
-}
+//     c.JSON(http.StatusOK, gin.H{"suspend":"Mda Suspended"})
+// }
 
 
 
-func ActivateMda(c *gin.Context) {
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
-        return
-    }
+// func ActivateMda(c *gin.Context) {
+//     id := c.Param("id")
+//     if id == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
+//         return
+//     }
 
-    var mda Mda
-    if err := config.DB.First(&mda, id).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-        return
-    }
+//     var mda Mda
+//     if err := config.DB.First(&mda, id).Error; err != nil {
+//         if errors.Is(err, gorm.ErrRecordNotFound) {
+//             c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
+//         } else {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+//         }
+//         return
+//     }
 
-    mda.IsActive = true // Assuming "activate" means setting IsActive to true
+//     mda.IsActive = true // Assuming "activate" means setting IsActive to true
 
-    if err := config.DB.Save(&mda).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Mda"})
-        return
-    }
+//     if err := config.DB.Save(&mda).Error; err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Mda"})
+//         return
+//     }
 
-    c.JSON(http.StatusOK, gin.H{"Activate":"Mda Activated"})
-}
+//     c.JSON(http.StatusOK, gin.H{"Activate":"Mda Activated"})
+// }
