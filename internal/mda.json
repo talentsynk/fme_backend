@@ -55,4 +55,87 @@
         "UserID": 5
     }
 ]
+},
+
+
+
+
+{
+    "stc": [
+        {
+            "ID": 1,
+            "CreatedAt": "2024-04-03T12:00:00+01:00",
+            "UpdatedAt": "2024-04-03T12:00:00+01:00",
+            "DeletedAt": null,
+            "Ownership": "Yusuf",
+            "CentreCode": "002",
+            "Name": "Anikiagency",
+            "LocalGovernment": "Alimosho",
+            "State": "Lagos",
+            "CertificateOfOperationURL": "www.certificateurl.com",
+            "Fmestc": true,
+            "MdaID": 0,
+            "UserID": 3
+        },
+        {
+            "ID": 2,
+            "CreatedAt": "2024-04-03T12:01:47+01:00",
+            "UpdatedAt": "2024-04-03T12:01:47+01:00",
+            "DeletedAt": null,
+            "Ownership": "Akindele",
+            "CentreCode": "003",
+            "Name": "Akindeleagency",
+            "LocalGovernment": "Alimosho",
+            "State": "Lagos",
+            "CertificateOfOperationURL": "www.certificateurls.com",
+            "Fmestc": true,
+            "MdaID": 0,
+            "UserID": 3
+        },
+        {
+            "ID": 3,
+            "CreatedAt": "2024-04-11T16:30:35+01:00",
+            "UpdatedAt": "2024-04-11T16:30:35+01:00",
+            "DeletedAt": null,
+            "Ownership": "yusuf",
+            "CentreCode": "003",
+            "Name": "Akindeleyusuf",
+            "LocalGovernment": "Ojo",
+            "State": "lagos",
+            "CertificateOfOperationURL": "www.certificateurls.com",
+            "Fmestc": true,
+            "MdaID": 0,
+            "UserID": 10
+        },
+        {
+            "ID": 4,
+            "CreatedAt": "2024-04-12T09:46:05+01:00",
+            "UpdatedAt": "2024-04-12T09:46:05+01:00",
+            "DeletedAt": null,
+            "Ownership": "Qudus",
+            "CentreCode": "003",
+            "Name": "LarindeYusuf",
+            "LocalGovernment": "Alimosho",
+            "State": "lagos",
+            "CertificateOfOperationURL": "www.certificateurls.com",
+            "Fmestc": false,
+            "MdaID": 7,
+            "UserID": 13
+        },
+        {
+            "ID": 5,
+            "CreatedAt": "2024-04-12T12:09:09+01:00",
+            "UpdatedAt": "2024-04-12T12:09:09+01:00",
+            "DeletedAt": null,
+            "Ownership": "Sanwo-olu",
+            "CentreCode": "004",
+            "Name": "mamaput",
+            "LocalGovernment": "Mushin",
+            "State": "lagos",
+            "CertificateOfOperationURL": "www.certificateurls.com",
+            "Fmestc": true,
+            "MdaID": 0,
+            "UserID": 14
+        }
+    ]
 }
