@@ -49,3 +49,6 @@ func generateRandomPassword() string {
 //     // Use CreateMdaUser function to create user with generated password
 //     return CreateMdaUser(tx, phoneNumber, email, randomPassword)
 // }
+
+
+

@@ -45,7 +45,6 @@ func CreateMda(c *gin.Context) {
         RegisterName:  MdaCreateSchema.RegisterName,
         Address: MdaCreateSchema.Address,
         StateOfOperation: stateOfOperation,
-        Email: MdaCreateSchema.Email,
         UserID: newUserID,
     }
 
@@ -248,6 +247,25 @@ func FilterMdaAscending(c *gin.Context) {
 }
 
 
+func FilterMdaByState(c *gin.Context){
+    StateOfOperation := c.Query("StateOfOperation")
+    if StateOfOperation == ""{
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error":"State parameter is required",
+        })
+        return
+    }
+
+    var mdas []Mda
+    tx := config.DB.Where("StateOfOperation = ?",StateOfOperation).Find(&mdas)
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error":"Failed to retrieve STCs",
+        })
+         return
+    }
+    c.JSON(http.StatusOK, gin.H{"mdas":mdas})
+}
 
 // func SuspendMda(c *gin.Context) {
 //     id := c.Param("id")

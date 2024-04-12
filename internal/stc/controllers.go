@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-
+    "strconv"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -73,7 +73,7 @@ func CreateFmeStc(c *gin.Context){
 
 
 func CreateMdaStc(c *gin.Context){
-    // retrieve the mda id
+    
     mdaIDStr,exists := c.Get("mdaID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -146,10 +146,25 @@ c.JSON(http.StatusOK, gin.H{
 
 
 func GetStc(c *gin.Context){
-    fmt.Println("controller started")
+     fmt.Println("controller started")
+     limitStr := c.Query("limit")
+     pageStr := c.Query("page")
+
+
+
+     limit, err := strconv.Atoi(limitStr)
+    if err != nil || limit <= 0{
+        limit = 10 
+    }
+     page, err := strconv.Atoi(pageStr)
+     if err != nil || page <= 0 {
+         page = 1
+     }
+ 
+     offset := (page - 1) * limit
 
     var stc []Stc
-    if result := config.DB.Find(&stc); result.Error != nil {
+    if result := config.DB.Limit(limit).Offset(offset).Find(&stc); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
@@ -167,7 +182,7 @@ func GetStcByID(c *gin.Context){
     var stc Stc
     if err := config.DB.First(&stc, id).Error; err != nil{
         if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error":"Mda not found"})
+            c.JSON(http.StatusNotFound, gin.H{"error":"Stc not found"})
         } else {
             c.JSON(http.StatusInternalServerError, gin.H{"error":"Internal Server Error"})
         }
@@ -179,7 +194,7 @@ func GetStcByID(c *gin.Context){
 
 
 func TotalNumberOfStc(c *gin.Context){
-     fmt.Println("Get Total Number Of Mda")
+     fmt.Println("Get Total Number Of Stc")
      var count int64
 
    if result := config.DB.Model(&Stc{}).Count(&count); result.Error != nil{
@@ -192,7 +207,7 @@ func TotalNumberOfStc(c *gin.Context){
 
 
 func TotalNumberOfOperationalStc(c *gin.Context){
-    fmt.Println("Get Total Number Of Active Mda")
+    fmt.Println("Get Total Number Of Active Stc")
     var count int64
 
     if result := config.DB.Model(&Stc{}).Where("is_operational  = ?", true).Count(&count); result.Error != nil {
@@ -205,7 +220,7 @@ func TotalNumberOfOperationalStc(c *gin.Context){
 
 
 func TotalNumberOfInOperationalStc(c *gin.Context){
-    fmt.Println("Get Total Number Of InActive Mda")
+    fmt.Println("Get Total Number Of InActive Stc")
     var count int64
 
     if result := config.DB.Model(&Stc{}).Where("is_operational = ?", false).Count(&count); result.Error != nil {
@@ -252,7 +267,7 @@ func UpdateStc(c *gin.Context) {
     var stc Stc
     if err := config.DB.First(&stc, id).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
+            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
         } else {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         }
@@ -265,7 +280,7 @@ func UpdateStc(c *gin.Context) {
     }
 
     if err := config.DB.Save(&stc).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Mda"})
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Stc"})
         return
     }
 
@@ -281,12 +296,12 @@ func FilterStcDescending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in ascending order
+    
     sort.Slice(stcs, func(i, j int) bool {
         return stcs[i].Ownership < stcs[j].Ownership
     })
 
-    // Send the sorted MDAs as the response
+    
     c.JSON(http.StatusOK, gin.H{"stcs": stcs})
 }
 
@@ -298,12 +313,12 @@ func FilterStcAscending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in ascending order
+   
     sort.Slice(stcs, func(i, j int) bool {
         return stcs[i].Ownership > stcs[j].Ownership
     })
 
-    // Send the sorted MDAs as the response
+    
     c.JSON(http.StatusOK, gin.H{"stcs": stcs})
 }
 
@@ -364,4 +379,26 @@ func ActivateStc(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"Activate":"STC Activated"})
+}
+
+
+
+func FilterStcByState(c *gin.Context){
+    state := c.Query("state")
+    if state == ""{
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error":"State parameter is required",
+        })
+        return
+    }
+
+    var stcs []Stc
+    tx := config.DB.Where("state = ?", state).Find(&stcs)
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error":"Failed to retrieve STCs",
+        })
+         return
+    }
+    c.JSON(http.StatusOK, gin.H{"stcs":stcs})
 }
