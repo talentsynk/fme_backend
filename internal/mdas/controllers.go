@@ -32,7 +32,7 @@ func CreateMda(c *gin.Context) {
     }
    // Transaction Handling
    tx := config.DB.Begin() 
-   result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.Phone,MdaCreateSchema.Email, "dfcv")
+   result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.PhoneNumber, MdaCreateSchema.Email, "dfcv")
    if !result {
        tx.Rollback() // Rollback if user creation fails
        c.JSON(http.StatusBadRequest, gin.H{
