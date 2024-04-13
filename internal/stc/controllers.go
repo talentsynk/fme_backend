@@ -34,7 +34,7 @@ func CreateFmeStc(c *gin.Context){
   tx := config.DB.Begin() // Begin a transaction
 
   // Create user with transaction
-  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.Phone, StcCreateSchema.Email, "dfcv")
+  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.PhoneNumber, StcCreateSchema.Email, "dfcv")
   if !result {
       tx.Rollback() // Rollback if user creation fails
       c.JSON(http.StatusBadRequest, gin.H{
@@ -106,7 +106,7 @@ func CreateMdaStc(c *gin.Context){
   tx := config.DB.Begin() // Begin a transaction
 
   // Create user with transaction
-  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.Phone, StcCreateSchema.Email, "dfcv")
+  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.PhoneNumber, StcCreateSchema.Email, "dfcv")
   if !result {
       tx.Rollback() // Rollback if user creation fails
       c.JSON(http.StatusBadRequest, gin.H{

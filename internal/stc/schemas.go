@@ -9,5 +9,5 @@ var StcCreateSchema  struct {
 	State                        string  
 	CertificateOfOperationURL    string 
 	Email                        string 
-	Phone                        string
+	PhoneNumber                  string
 }
