@@ -235,6 +235,26 @@ func TotalNumberOfInOperationalStc(c *gin.Context){
 
 
 
+// func SearchStc(c *gin.Context) {
+//     query := c.Query("query")
+//     if query == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
+//         return
+//     }
+
+//     var stcsearch []Stc
+//     if err := config.DB.Where("ownership LIKE ? OR centre_code LIKE ? OR name LIKE ? OR local_government LIKE ? OR state LIKE ? OR  certificate_of_operational_url LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+//         return
+//     }
+
+//     if len(stcsearch) == 0 {
+//         c.JSON(http.StatusOK, gin.H{"message": "No matching stc found"})
+//         return
+//     }
+
+//     c.JSON(http.StatusOK, stcsearch)
+// }
 func SearchStc(c *gin.Context) {
     query := c.Query("query")
     if query == "" {
@@ -243,7 +263,7 @@ func SearchStc(c *gin.Context) {
     }
 
     var stcsearch []Stc
-    if err := config.DB.Where("ownership LIKE ? OR center_code LIKE ? OR name LIKE ? OR local_government ? OR state LIKE ? OR LIKE certificate_of_operational_url", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
+    if err := config.DB.Where("ownership LIKE ? OR centre_code LIKE ? OR name LIKE ? OR local_government LIKE ? OR state LIKE ? OR certificate_of_operational_url LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         return
     }
@@ -255,7 +275,6 @@ func SearchStc(c *gin.Context) {
 
     c.JSON(http.StatusOK, stcsearch)
 }
-
 
 func UpdateStc(c *gin.Context) {
     id := c.Param("id")
