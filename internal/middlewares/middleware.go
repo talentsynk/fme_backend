@@ -57,6 +57,7 @@ package middleware
 import (
 	"fme_backend/internal/config"
 	mda "fme_backend/internal/mdas"
+	"fme_backend/internal/stc"
 	myuser "fme_backend/internal/user"
 	"fmt"
 	"net/http"
@@ -148,16 +149,20 @@ func RequireMda(c *gin.Context) {
 
         var user myuser.User
         config.DB.First(&user, "email = ?", claims["sub"])
-
         if user.ID == 0 {
             c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
             c.Abort()
             return
         }
 
+        if user.Role != 2 {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user"})
+            c.Abort()
+            return
+        }
+
         var mda mda.Mda
         config.DB.First(&mda, "user_id = ?", user.ID)
-
         if mda.ID == 0 {
             c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user"})
             c.Abort()
@@ -214,17 +219,23 @@ func RequireStc(c *gin.Context) {
             return
         }
 
-        var mda mda.Mda
-        config.DB.First(&mda, "user_id = ?", user.ID)
+        if user.Role !=3{
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Stc user"})
+            c.Abort()
+            return
+        }
 
-        if mda.ID == 0 {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user"})
+        var stc stc.Stc
+        config.DB.First(&stc, "user_id = ?", user.ID)
+
+        if stc.ID == 0 {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "No stc account user"})
             c.Abort()
             return
         }
 
         c.Set("userID", user.ID) 
-        c.Set("mdaID", mda.ID)
+        c.Set("stcID", stc.ID)
         c.Next()
     } else {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})

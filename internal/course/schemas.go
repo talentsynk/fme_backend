@@ -1,11 +1,12 @@
 package course
 
 var CreateCourseSchema struct {
-	Name string
+	Name        string
 	Description string
+	CategoryID uint
 }
 
-var CreateSectorSchema struct {
-	Name string
+var CreateCategorySchema struct {
+	Name        string
 	Description string
 }

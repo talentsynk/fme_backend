@@ -8,11 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
-
 func CreateCourse(c *gin.Context) {
 	if c.Bind(&CreateCourseSchema) != nil {
-		c.JSON(http.StatusBadRequest,gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Bad request body",
 		})
 	}
@@ -27,11 +25,12 @@ func CreateCourse(c *gin.Context) {
 	}
 
 	course := Course{
-		Name: CreateCourseSchema.Name,
+		Name:        CreateCourseSchema.Name,
 		Description: CreateCourseSchema.Description,
+		CategoryID: CreateCourseSchema.CategoryID,
 	}
 
-	result:= config.DB.Create(&course)
+	result := config.DB.Create(&course)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to create course",
@@ -42,42 +41,41 @@ func CreateCourse(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Course created successfully"})
 }
 
-
-func CreateSector(c *gin.Context) {
-	if c.Bind(&CreateSectorSchema) != nil {
-		c.JSON(http.StatusBadRequest,gin.H{
+func CreateCategory(c *gin.Context) {
+	if c.Bind(&CreateCategorySchema) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Bad request body",
 		})
 	}
 
-	var sectorCheck Course
-	config.DB.Where("name= ?", CreateCourseSchema.Name).First(&sectorCheck)
-	if sectorCheck.ID != 0 {
+	var categoryCheck Category
+	config.DB.Where("name= ?", CreateCategorySchema.Name).First(&categoryCheck)
+	if categoryCheck.ID != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "Sector already exists",
+			"message": "Category already exists",
 		})
 		return
 	}
 
-	sector := Sector{
-		Name: CreateSectorSchema.Name,
-		Description: CreateSectorSchema.Description,
+	category := Category{
+		Name:        CreateCategorySchema.Name,
+		Description: CreateCategorySchema.Description,
 	}
 
-	result:= config.DB.Create(&sector)
+	result := config.DB.Create(&category)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create sector",
+			"error": "Failed to create Category",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Sector created successfully"})
+	c.JSON(200, gin.H{"message": "Category created successfully"})
 }
 
-func GetCourse(c *gin.Context){
+func GetCourse(c *gin.Context) {
 	// GET ID
-	idStr:= c.Param("id")
+	idStr := c.Param("id")
 	if idStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter not provided",
@@ -85,8 +83,8 @@ func GetCourse(c *gin.Context){
 		return
 	}
 	// Convert id to string
-	id,err :=strconv.Atoi(idStr)
-	if err!= nil {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter invalid",
 		})
@@ -95,7 +93,7 @@ func GetCourse(c *gin.Context){
 
 	// FIND IF THE COURSE EXIST
 	var instance Course
-	instance_result := config.DB.Select("id","name","description").First(&instance, id)
+	instance_result := config.DB.Select("id", "name", "description").First(&instance, id)
 	if instance_result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "instance does not exist",
@@ -108,47 +106,47 @@ func GetCourse(c *gin.Context){
 
 func GetCoursesByName(c *gin.Context) {
 	name := c.Query("name") // Get the query string parameter named "name"
-  
+
 	var courses []Course
-  
+
 	// Build the query with filtering based on the name parameter
-	result := config.DB.Select("id","name","description").Where("name LIKE ?", "%"+name+"%").Find(&courses)
+	result := config.DB.Select("id", "name", "description").Where("name LIKE ?", "%"+name+"%").Find(&courses)
 	if result.Error != nil {
-	  c.JSON(http.StatusNotFound, gin.H{"error": result.Error.Error()})
-	  return
+		c.JSON(http.StatusNotFound, gin.H{"error": result.Error.Error()})
+		return
 	}
-  
+
 	// Respond with the list of matching courses
 	c.JSON(200, courses)
-  }
+}
 
 func GetAllCourses(c *gin.Context) {
 	var courses []Course
 	var count int64
 
-  // Find all courses from the database
-  result := config.DB.Select("id","name","description").Find(&courses)
-  if result.Error != nil {
-    c.JSON(http.StatusNotFound, gin.H{"message":"no course found"})
-    return
-  }
+	// Find all courses from the database
+	result := config.DB.Select("id", "name", "description").Find(&courses)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "no course found"})
+		return
+	}
 
-  totalCourses:= config.DB.Model(&Course{}).Count(&count)
+	totalCourses := config.DB.Model(&Course{}).Count(&count)
 	if totalCourses.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "unable to get total courses"})
 		return
 	}
 
-  // Respond with the list of courses
-  c.JSON(200, gin.H{
-	"courses":courses,
-	"total_courses":count,
-  })
+	// Respond with the list of courses
+	c.JSON(200, gin.H{
+		"courses":       courses,
+		"total_courses": count,
+	})
 }
 
-func GetSector(c *gin.Context) {
+func GetCategory(c *gin.Context) {
 	// GET ID
-	id:= c.Param("id")
+	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter not provided",
@@ -157,11 +155,11 @@ func GetSector(c *gin.Context) {
 	}
 
 	// FIND IF THE COURSE EXIST
-	var instance Sector
-	instance_result := config.DB.Select("id","name","description").First(&instance, id)
+	var instance Category
+	instance_result := config.DB.Select("id", "name", "description").First(&instance, id)
 	if instance_result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"message": "instance does not exist",
+			"message": "Category does not exist",
 		})
 		return
 	}
@@ -169,25 +167,25 @@ func GetSector(c *gin.Context) {
 	c.JSON(http.StatusOK, instance)
 }
 
-func GetAllSectors(c *gin.Context) {
-	var sectors []Sector
+func GetAllCategories(c *gin.Context) {
+	var categories []Category
 	var count int64
 
 	// Find all courses from the database
-	result := config.DB.Select("id","name","description").Find(&sectors)
+	result := config.DB.Select("id", "name", "description").Find(&categories)
 	if result.Error != nil {
-	  c.JSON(http.StatusNotFound, gin.H{"message":"no course found"})
-	  return
-	}
-	totalCourses:= config.DB.Model(&Sector{}).Count(&count)
-	if totalCourses.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "unable to get total sectors"})
+		c.JSON(http.StatusNotFound, gin.H{"message": "no course found"})
 		return
 	}
-  
+	totalCourses := config.DB.Model(&Category{}).Count(&count)
+	if totalCourses.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "unable to get total Categories"})
+		return
+	}
+
 	// Respond with the list of courses
 	c.JSON(200, gin.H{
-		"sectors":sectors,
-		"total_sectors": count,
+		"Categories":       categories,
+		"total_Categories": count,
 	})
 }
