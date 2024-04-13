@@ -1,11 +1,12 @@
 package main
 
 import (
+	myuser "fme_backend/internal/user"
 	"fme_backend/internal/config"
+	"fme_backend/internal/course"
 	"fme_backend/internal/mdas"
-	"fme_backend/internal/student"
-	"fme_backend/internal/user"
 	"fme_backend/internal/stc"
+	"fme_backend/internal/student"
 	
 )
 
@@ -19,6 +20,8 @@ func main() {
 		&myuser.User{},
 		&mda.Mda{},
 		&student.Student{},
+		&course.Category{},
+		&course.Course{},
 		&stc.Stc{},
 		
 	)

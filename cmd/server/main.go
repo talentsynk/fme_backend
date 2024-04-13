@@ -2,6 +2,7 @@ package main
 
 import (
 	"fme_backend/internal/config"
+	"fme_backend/internal/course"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
 	"fme_backend/internal/student"
@@ -76,5 +77,19 @@ func main() {
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
 	studentgroup.GET("/all-fme",middleware.RequireFme,student.GetAllStudents)
 	studentgroup.GET("/fme/:id",middleware.RequireFme,student.GetStudent)
+
+	categorygroup := r.Group("category")
+	categorygroup.POST("/create",middleware.RequireFme,course.CreateCategory)
+	categorygroup.GET("/:id",middleware.RequireAuth,course.GetCategory)
+	categorygroup.GET("/all",middleware.RequireAuth,course.GetAllCategories)
+
+	coursegroup := r.Group("/course")
+	coursegroup.POST("/create",middleware.RequireFme,course.CreateCourse)
+	coursegroup.GET("/:id", middleware.RequireAuth, course.GetCourse)
+	coursegroup.GET("/all",middleware.RequireAuth,course.GetAllCourses)
+
+	
+
+
     r.Run(":8000")
 }
