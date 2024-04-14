@@ -5,8 +5,8 @@ import "gorm.io/gorm"
 type Stc struct {
 	//complete it
 	gorm.Model
-	Ownership                    string  `gorm:"unique;not null"`
-	CentreCode                   string  `gorm:"unique;not null"`
+	Ownership                    string  `gorm:"not null"`
+	CentreCode                   string  `gorm:"not null"`
 	Name                         string  `gorm:"not null"`
 	LocalGovernment              string  `gorm:"not null"`
 	State                        string  `gorm:"not null"`
