@@ -7,9 +7,9 @@ type Stc struct {
 	gorm.Model
 	Ownership                    string  `gorm:"unique;not null"`
 	CentreCode                   string  `gorm:"unique;not null"`
-	Name                         string  `gorm:"unique;not null"`
-	LocalGovernment              string  `gorm:"unique;not null"`
-	State                        string  `gorm:"unique;not null"`
+	Name                         string  `gorm:"not null"`
+	LocalGovernment              string  `gorm:"not null"`
+	State                        string  `gorm:"not null"`
 	isOperational                bool   
 	CertificateOfOperationURL    string `gorm:"unique;not null"`
 	Fmestc                       bool
