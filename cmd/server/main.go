@@ -43,6 +43,7 @@ func main() {
 
     mdagroup := r.Group("/mda")
 	mdagroup.POST("/create-mda",middleware.RequireFme, mda.CreateMda)
+.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
 	mdagroup.GET("/get-all-mdas",middleware.RequireFme, mda.GetAllMdas)
 	mdagroup.GET("/search-mda",middleware.RequireAuth, mda.SearchMda)
 	mdagroup.PATCH("/update-mda/:id",middleware.RequireAuth, mda.UpdateMda)

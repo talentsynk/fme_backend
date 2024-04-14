@@ -93,19 +93,29 @@ func GetAllMdas(c *gin.Context){
 
 
 func GetMdaByID(c *gin.Context){
-    id := c.Param("id")
-    if id == "" {
+    idStr := c.Param("id")
+    if idStr == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error":"Mda ID is required"})
         return
     }
 
+      id, err := strconv.Atoi(idStr)
+      if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message":"path parameter invalid",
+        })
+        return
+      }
+
+    
+
     var mda Mda
-    if err := config.DB.First(&mda, id).Error; err != nil{
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error":"Mda not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error":"Internal Server Error"})
-        }
+    instance_result := config.DB.Select("id","register_name","email","address","state_of_operation").First(&mda, id)
+    fmt.Println(id)
+        if  instance_result.Error != nil {
+            c.JSON(http.StatusNotFound, gin.H{
+                "message":"Instance does not exist"})
+         
         return
     }
 
