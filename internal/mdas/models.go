@@ -13,3 +13,4 @@ type Mda struct {
 	UserID             uint
 	IsActive           bool    `gorm:"not null"`
 }
+
