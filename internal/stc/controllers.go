@@ -44,11 +44,10 @@ func CreateFmeStc(c *gin.Context){
   }
   	stc := Stc{
 		Name:              StcCreateSchema.Name,
-		Address:   StcCreateSchema.Address,
+		Address:           StcCreateSchema.Address,
 		State: 			   state,
         Email:             StcCreateSchema.Email,
 		isOperational:     true,
-		CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
         UserID: newUserID,
         Fmestc: true,
     }
@@ -120,7 +119,6 @@ func CreateMdaStc(c *gin.Context){
     State: 			   state,
     Email:             StcCreateSchema.Email,
     isOperational:     true,
-    CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
     UserID: newUserID,
     MdaID: mdaID,
 }
