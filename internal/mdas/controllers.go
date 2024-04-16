@@ -42,10 +42,12 @@ func CreateMda(c *gin.Context) {
    }
 
     mda := Mda{
-        RegisterName:  MdaCreateSchema.RegisterName,
-        Address: MdaCreateSchema.Address,
-        StateOfOperation: stateOfOperation,
+        RegisterName:MdaCreateSchema.RegisterName,
+        Address:MdaCreateSchema.Address,
+        StateOfOperation:stateOfOperation,
+        Email:MdaCreateSchema.Email,
         UserID: newUserID,
+        IsActive: true,
     }
 
 	fmt.Println(mda)
@@ -73,7 +75,7 @@ func GetAllMdas(c *gin.Context){
 
     limit, err := strconv.Atoi(limitStr)
     if err != nil || limit <= 0{
-        limit = 10 
+        limit = 100 
     }
 
     page, err := strconv.Atoi(pageStr)
@@ -121,48 +123,6 @@ func GetMdaByID(c *gin.Context){
 
     c.JSON(http.StatusOK, mda)
 }
-
-
-func TotalNumberOfMda(c *gin.Context){
-     fmt.Println("Get Total Number Of Mda")
-     var count int64
-
-   if result := config.DB.Model(&Mda{}).Count(&count); result.Error != nil{
-     c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
-     return
-   }
-
-   c.JSON(http.StatusOK, gin.H{"total_count":count})
-}
-
-
-func TotalNumberOfActiveMda(c *gin.Context){
-    fmt.Println("Get Total Number Of Active Mda")
-    var count int64
-
-    if result := config.DB.Model(&Mda{}).Where("is_active = ?", true).Count(&count); result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"total_is_active_count":count})
-}
-
-
-func TotalNumberOfInActiveMda(c *gin.Context){
-    fmt.Println("Get Total Number Of InActive Mda")
-    var count int64
-
-    if result := config.DB.Model(&Mda{}).Where("is_active = ?", false).Count(&count); result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"total_in_active_count":count})
-}
-
-
-
 
 
 func SearchMda(c *gin.Context) {
@@ -332,3 +292,25 @@ func FilterMdaByState(c *gin.Context){
 
 //     c.JSON(http.StatusOK, gin.H{"Activate":"Mda Activated"})
 // }
+
+
+
+func MdaTotal(c *gin.Context){
+    fmt.Println("Get Total number of stc, active stc, inactive stc")
+    var totalCount, activeCount, inactiveCount int64
+    if result := config.DB.Model(&Mda{}).Count(&totalCount); result.Error != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
+        return
+      }
+
+      if result := config.DB.Model(&Mda{}).Where("is_active = ?", true).Count(&activeCount); result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    if result := config.DB.Model(&Mda{}).Where("is_active = ?", false).Count(&inactiveCount); result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"total_mda":totalCount, "total_active_mda":activeCount,"total_inactive_mda":inactiveCount})
+}

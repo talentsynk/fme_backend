@@ -62,8 +62,6 @@ func CreateFmeUser(c *gin.Context) {
 		OTPExpiresAt: time.Now(),
 		Role:1,
 		IsActive: true,
-
-
 	}
 
 	result := config.DB.Create(&user)
@@ -161,7 +159,7 @@ func ActivateUser(c *gin.Context) {
 	userId ,userexists := c.Get("userID")
 	if !userexists {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Problem with the aithorization token",
+			"message": "Problem with the authorization token",
 		})
 		return
 	}

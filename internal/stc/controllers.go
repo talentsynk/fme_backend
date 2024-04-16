@@ -48,6 +48,7 @@ func CreateFmeStc(c *gin.Context){
 		Name:              StcCreateSchema.Name,
 		LocalGovernment:   StcCreateSchema.LocalGovernment,
 		State: 			   state,
+        Email:             StcCreateSchema.Email,
 		isOperational:     true,
 		CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
         UserID: newUserID,
@@ -121,6 +122,7 @@ func CreateMdaStc(c *gin.Context){
     Name:              StcCreateSchema.Name,
     LocalGovernment:   StcCreateSchema.LocalGovernment,
     State: 			   state,
+    Email:             StcCreateSchema.Email,
     isOperational:     true,
     CertificateOfOperationURL: StcCreateSchema.CertificateOfOperationURL,
     UserID: newUserID,
@@ -147,6 +149,11 @@ c.JSON(http.StatusOK, gin.H{
 
 func GetStc(c *gin.Context){
      fmt.Println("controller started")
+     userRole := c.GetString("user_role")
+     if userRole != "fme" && userRole != "mda" {
+         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+         return
+     }
      limitStr := c.Query("limit")
      pageStr := c.Query("page")
 
@@ -154,7 +161,7 @@ func GetStc(c *gin.Context){
 
      limit, err := strconv.Atoi(limitStr)
     if err != nil || limit <= 0{
-        limit = 10 
+        limit = 100
     }
      page, err := strconv.Atoi(pageStr)
      if err != nil || page <= 0 {
@@ -173,6 +180,11 @@ func GetStc(c *gin.Context){
 
 
 func GetStcByID(c *gin.Context){
+    userRole := c.GetString("user_role")
+    if userRole != "fme" && userRole != "mda" {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+        return
+    }
     id := c.Param("id")
     if id == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error":"Stc ID is required"})
@@ -191,48 +203,6 @@ func GetStcByID(c *gin.Context){
 
     c.JSON(http.StatusOK, stc)
 }
-
-
-func TotalNumberOfStc(c *gin.Context){
-     fmt.Println("Get Total Number Of Stc")
-     var count int64
-
-   if result := config.DB.Model(&Stc{}).Count(&count); result.Error != nil{
-     c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
-     return
-   }
-
-   c.JSON(http.StatusOK, gin.H{"total_count":count})
-}
-
-
-func TotalNumberOfOperationalStc(c *gin.Context){
-    fmt.Println("Get Total Number Of Active Stc")
-    var count int64
-
-    if result := config.DB.Model(&Stc{}).Where("is_operational  = ?", true).Count(&count); result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"total_is_active_count":count})
-}
-
-
-func TotalNumberOfInOperationalStc(c *gin.Context){
-    fmt.Println("Get Total Number Of InActive Stc")
-    var count int64
-
-    if result := config.DB.Model(&Stc{}).Where("is_operational = ?", false).Count(&count); result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"total_in_active_count":count})
-}
-
-
-
 
 
 // func SearchStc(c *gin.Context) {
@@ -255,6 +225,8 @@ func TotalNumberOfInOperationalStc(c *gin.Context){
 
 //     c.JSON(http.StatusOK, stcsearch)
 // }
+
+
 func SearchStc(c *gin.Context) {
     query := c.Query("query")
     if query == "" {
@@ -420,4 +392,53 @@ func FilterStcByState(c *gin.Context){
          return
     }
     c.JSON(http.StatusOK, gin.H{"stcs":stcs})
+}
+
+
+
+func StcTotal(c *gin.Context){
+    fmt.Println("Get Total number of stc, active stc, inactive stc")
+  
+    var totalCount, activeCount, inactiveCount int64
+    if result := config.DB.Model(&Stc{}).Count(&totalCount); result.Error != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
+        return
+    }
+
+    if result := config.DB.Model(&Stc{}).Where("is_operational  = ?", true).Count(&activeCount); result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    if result := config.DB.Model(&Stc{}).Where("is_operational = ?", false).Count(&inactiveCount); result.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"total_count":totalCount, "total_is_active":activeCount, "total_in_active":inactiveCount})
+}
+
+func GetTotalStcsByMdaID(c *gin.Context) {
+    mdaIDStr, exists := c.Get("mdaID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+    mdaID, ok := mdaIDStr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+
+    
+    var totalstcs int64
+    if result := config.DB.Model(&Stc{}).Where("mda_id = ?", mdaID).Count(&totalstcs); result.Error != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"totalStcs": totalstcs})
 }
