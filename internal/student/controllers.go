@@ -372,3 +372,6 @@ func GetStudent(c *gin.Context) {
 
 	c.JSON(http.StatusOK, student)
 }
+
+
+
