@@ -43,10 +43,8 @@ func CreateFmeStc(c *gin.Context){
       return
   }
   	stc := Stc{
-		Ownership:         StcCreateSchema.Ownership, 
-		CentreCode:        StcCreateSchema.CentreCode,
 		Name:              StcCreateSchema.Name,
-		LocalGovernment:   StcCreateSchema.LocalGovernment,
+		Address:   StcCreateSchema.Address,
 		State: 			   state,
         Email:             StcCreateSchema.Email,
 		isOperational:     true,
@@ -117,10 +115,8 @@ func CreateMdaStc(c *gin.Context){
   }
 
   stc := Stc{
-    Ownership:         StcCreateSchema.Ownership, 
-    CentreCode:        StcCreateSchema.CentreCode,
     Name:              StcCreateSchema.Name,
-    LocalGovernment:   StcCreateSchema.LocalGovernment,
+    Address:   StcCreateSchema.Address,
     State: 			   state,
     Email:             StcCreateSchema.Email,
     isOperational:     true,
@@ -289,7 +285,7 @@ func FilterStcDescending(c *gin.Context) {
 
     
     sort.Slice(stcs, func(i, j int) bool {
-        return stcs[i].Ownership < stcs[j].Ownership
+        return stcs[i].Name < stcs[j].Name
     })
 
     
@@ -306,7 +302,7 @@ func FilterStcAscending(c *gin.Context) {
 
    
     sort.Slice(stcs, func(i, j int) bool {
-        return stcs[i].Ownership > stcs[j].Ownership
+        return stcs[i].Name > stcs[j].Name
     })
 
     

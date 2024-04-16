@@ -2,12 +2,10 @@ package stc
 
 
 var StcCreateSchema  struct {
-	Ownership                    string  
-	CentreCode                   string  
-	Name                         string  
-	LocalGovernment              string  
-	State                        string  
-	CertificateOfOperationURL    string 
+	Name                         string 
 	Email                        string 
+	Address                      string  
+	State                        string  
+	CertificateOfOperationURL    string  
 	PhoneNumber                  string
 }

@@ -67,7 +67,7 @@ func main() {
 	 stcgroup.PATCH("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
 	 stcgroup.PATCH("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
-	 stcgroup.GET("/get-mda-stc",middleware.RequireAuth, stc.GetTotalStcsByMdaID)
+	 stcgroup.GET("/get-mda-stc",middleware.RequireMda, stc.GetTotalStcsByMdaID)
 	 
 
 
