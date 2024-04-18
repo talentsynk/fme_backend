@@ -229,7 +229,7 @@ func SearchStc(c *gin.Context) {
     }
 
     var stcsearch []Stc
-    if err := config.DB.Where("ownership LIKE ? OR centre_code LIKE ? OR name LIKE ? OR local_government LIKE ? OR state LIKE ? OR certificate_of_operational_url LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
+    if err := config.DB.Where("name LIKE ? OR email LIKE ? OR state LIKE ? OR address LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         return
     }
