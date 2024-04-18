@@ -11,7 +11,6 @@ type Stc struct {
 	Address                      string  `gorm:"not null"`
 	State                        string  `gorm:"not null"`
 	isOperational                bool   
-	CertificateOfOperationURL    string `gorm:"not null"`
 	Fmestc                       bool
 	MdaID                        uint
 	UserID                       uint	
