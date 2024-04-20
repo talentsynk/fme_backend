@@ -14,6 +14,7 @@ import (
 )
 
 
+
 func CreateMda(c *gin.Context) {
 	fmt.Println("controller started")
     if  c.BindJSON(&MdaCreateSchema) != nil{
@@ -45,9 +46,7 @@ func CreateMda(c *gin.Context) {
         RegisterName:MdaCreateSchema.RegisterName,
         Address:MdaCreateSchema.Address,
         StateOfOperation:stateOfOperation,
-        Email:MdaCreateSchema.Email,
         UserID: newUserID,
-        IsActive: true,
     }
 
 	fmt.Println(mda)
@@ -59,23 +58,20 @@ func CreateMda(c *gin.Context) {
         })
         return
     }
-
     tx.Commit() 
     c.JSON(http.StatusOK, gin.H{
         "message": "Mda created successfully",
     })
 }
 
-
-
-func GetAllMdas(c *gin.Context){
+func GetAllMdas(c *gin.Context) {
     fmt.Println("controller started")
     limitStr := c.Query("limit")
-    pageStr  := c.Query("page")
+    pageStr := c.Query("page")
 
     limit, err := strconv.Atoi(limitStr)
-    if err != nil || limit <= 0{
-        limit = 100 
+    if err != nil || limit <= 0 {
+        limit = 100
     }
 
     page, err := strconv.Atoi(pageStr)
@@ -84,45 +80,108 @@ func GetAllMdas(c *gin.Context){
     }
 
     offset := (page - 1) * limit
- 
-    var mdas []Mda
-    if result := config.DB.Limit(limit).Offset(offset).Find(&mdas); result.Error != nil {
+
+   
+    var mdas []struct {
+        Mda
+        Email    string  `json:"email"`
+        IsActive bool    `json:"is_active"`
+    }
+    if result := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Limit(limit).
+        Offset(offset).
+        Find(&mdas); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
-    c.JSON(http.StatusOK, gin.H{"mdas":mdas})
+
+    c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
 
-func GetMdaByID(c *gin.Context){
-    idStr := c.Param("id")
-    if idStr == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error":"Mda ID is required"})
-        return
-    }
+//     if result := config.DB.Limit(limit).Offset(offset).Find(&mdas); result.Error != nil {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+//         return
+//     }
+//     c.JSON(http.StatusOK, gin.H{"mdas":mdas})
+// }
 
-      id, err := strconv.Atoi(idStr)
-      if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{
-            "message":"path parameter invalid",
-        })
-        return
-      }
+
+// func GetMdaByID(c *gin.Context){
+//     idStr := c.Param("id")
+//     if idStr == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error":"Mda ID is required"})
+//         return
+//     }
+
+//       id, err := strconv.Atoi(idStr)
+//       if err != nil {
+//         c.JSON(http.StatusBadRequest, gin.H{
+//             "message":"path parameter invalid",
+//         })
+//         return
+//       }
 
     
 
-    var mda Mda
-    instance_result := config.DB.Select("id","register_name","email","address","state_of_operation").First(&mda, id)
-    fmt.Println(id)
-        if  instance_result.Error != nil {
-            c.JSON(http.StatusNotFound, gin.H{
-                "message":"Instance does not exist"})
+//     var mdas []struct {
+//         Mda
+//         Email    string  `json:"email"`
+//         IsActive bool    `json:"is_active"`
+//     }
+
+
+//     instance_result := config.DB.Select("id","register_name","email","address","state_of_operation").First(&mdas, id)
+//     fmt.Println(id)
+//         if  instance_result.Error != nil {
+//             c.JSON(http.StatusNotFound, gin.H{
+//                 "message":"Instance does not exist"})
          
+//         return
+//     }
+
+//     c.JSON(http.StatusOK, mdas)
+// }
+
+func GetMdaByID(c *gin.Context) {
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
+        return
+    }
+
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Invalid Mda ID provided",
+        })
+        return
+    }
+
+    var mda struct {
+        Mda
+        Email    string  `json:"email"`
+        IsActive bool    `json:"is_active"`
+    }
+
+    result := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        First(&mda, id)
+
+    if result.Error != nil {
+        c.JSON(http.StatusNotFound, gin.H{
+            "error": "MDA not found",
+        })
         return
     }
 
     c.JSON(http.StatusOK, mda)
 }
+
+
 
 
 func SearchMda(c *gin.Context) {
@@ -133,8 +192,13 @@ func SearchMda(c *gin.Context) {
     }
 
     var mdasearch []Mda
-    if err := config.DB.Where("register_name LIKE ? OR email LIKE ? OR address LIKE ? OR state_of_operation LIKE ?", "%"+query+"%", "%"+query+"%" , "%"+query+"%","%"+query+"%").Find(&mdasearch).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+    // Update the SQL query to include the email and isActive fields from the users table
+    if err := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Where("register_name LIKE ? OR address LIKE ? OR state_of_operation LIKE ?", "%"+query+"%" , "%"+query+"%","%"+query+"%").
+        Find(&mdasearch).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for MDAs", "details": err.Error()})
         return
     }
 
@@ -146,7 +210,6 @@ func SearchMda(c *gin.Context) {
     c.JSON(http.StatusOK, mdasearch)
 }
 
-
 func UpdateMda(c *gin.Context) {
     id := c.Param("id")
     if id == "" {
@@ -155,7 +218,12 @@ func UpdateMda(c *gin.Context) {
     }
 
     var mda Mda
-    if err := config.DB.First(&mda, id).Error; err != nil {
+    
+    // Fetch the MDA including the associated user information
+    if err := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        First(&mda, id).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
         } else {
@@ -164,13 +232,24 @@ func UpdateMda(c *gin.Context) {
         return
     }
 
+    // Update the MDA with the provided data
     if err := c.BindJSON(&mda); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
         return
     }
 
+    // Save the updated MDA to the database
     if err := config.DB.Save(&mda).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update Mda"})
+        return
+    }
+
+    // Fetch the updated MDA including the associated user information
+    if err := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        First(&mda, id).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated Mda"})
         return
     }
 
@@ -179,12 +258,20 @@ func UpdateMda(c *gin.Context) {
 
 
 
+func FilterMdaAscending(c *gin.Context) {
+    var mdas []struct {
+        Mda
+        Email    string `json:"email"`
+        IsActive bool   `json:"is_active"`
+    }
 
+    // Query to join Mda and User tables
+    result := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Find(&mdas)
 
-
-func FilterMdaDescending(c *gin.Context) {
-    var mdas []Mda
-    if result := config.DB.Find(&mdas); result.Error != nil {
+    if result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
@@ -194,49 +281,71 @@ func FilterMdaDescending(c *gin.Context) {
         return mdas[i].RegisterName < mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs as the response
+    // Send the sorted MDAs with user details as the response
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
+func FilterMdaDescending(c *gin.Context) {
+    var mdas []struct {
+        Mda
+        Email    string `json:"email"`
+        IsActive bool   `json:"is_active"`
+    }
 
+    // Query to join Mda and User tables
+    result := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Find(&mdas)
 
-func FilterMdaAscending(c *gin.Context) {
-    var mdas []Mda
-    if result := config.DB.Find(&mdas); result.Error != nil {
+    if result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
 
-    // Sort MDAs by name in ascending order
+    // Sort MDAs by name in descending order
     sort.Slice(mdas, func(i, j int) bool {
         return mdas[i].RegisterName > mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs as the response
+    // Send the sorted MDAs with user details as the response
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
 
-func FilterMdaByState(c *gin.Context){
-    StateOfOperation := c.Query("StateOfOperation")
-    if StateOfOperation == ""{
+
+
+func FilterMdaByState(c *gin.Context) {
+    StateOfOperation := c.Query("state_of_operation")
+    if StateOfOperation == "" {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error":"State parameter is required",
+            "error": "State parameter is required",
         })
         return
     }
 
-    var mdas []Mda
-    tx := config.DB.Where("StateOfOperation = ?",StateOfOperation).Find(&mdas)
+    // Retrieve MDAs matching the provided StateOfOperation
+    var mdas []struct {
+        Mda
+        Email    string `json:"email"`
+        IsActive bool   `json:"is_active"`
+    }
+    tx := config.DB.Table("mdas").
+        Select("mdas.*, users.email, users.is_active").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Where("state_of_operation = ?", StateOfOperation).
+        Find(&mdas)
     if tx.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{
-            "error":"Failed to retrieve STCs",
+            "error":   "Failed to retrieve MDAs",
+            "details": tx.Error.Error(), // Include details of the error
         })
-         return
+        return
     }
-    c.JSON(http.StatusOK, gin.H{"mdas":mdas})
-}
 
+    // Return the retrieved MDAs as the response
+    c.JSON(http.StatusOK, gin.H{"mdas": mdas})
+}
 // func SuspendMda(c *gin.Context) {
 //     id := c.Param("id")
 //     if id == "" {
@@ -295,22 +404,31 @@ func FilterMdaByState(c *gin.Context){
 
 
 
-func MdaTotal(c *gin.Context){
-    fmt.Println("Get Total number of stc, active stc, inactive stc")
+func MdaTotal(c *gin.Context) {
+    fmt.Println("Get Total number of MDA, active MDA, inactive MDA")
     var totalCount, activeCount, inactiveCount int64
-    if result := config.DB.Model(&Mda{}).Count(&totalCount); result.Error != nil{
-        c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
-        return
-      }
 
-      if result := config.DB.Model(&Mda{}).Where("is_active = ?", true).Count(&activeCount); result.Error != nil {
+    // Total number of MDAs
+    if result := config.DB.Model(&Mda{}).Count(&totalCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
 
-    if result := config.DB.Model(&Mda{}).Where("is_active = ?", false).Count(&inactiveCount); result.Error != nil {
+    // Total number of active MDAs
+    if result := config.DB.Model(&Mda{}).
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Where("users.is_active = ?", true).
+        Count(&activeCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
-    c.JSON(http.StatusOK, gin.H{"total_mda":totalCount, "total_active_mda":activeCount,"total_inactive_mda":inactiveCount})
+
+    // Total number of inactive MDAs
+    inactiveCount = totalCount - activeCount
+
+    c.JSON(http.StatusOK, gin.H{
+        "total_mda":            totalCount,
+        "total_active_mda":     activeCount,
+        "total_inactive_mda":   inactiveCount,
+    })
 }

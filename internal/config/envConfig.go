@@ -2,7 +2,9 @@ package config
 
 import (
 	// "github.com/joho/godotenv"
-  // "log"
+
+//   "log"
+
     "os"
 )
 
@@ -16,6 +18,7 @@ type Config struct {
 var AppConfig *Config
 
 // func init() {
+
     // Load .env file
     // err := godotenv.Load()
     // if err != nil {

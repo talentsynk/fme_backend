@@ -2,15 +2,16 @@ package main
 
 import (
 	"fme_backend/internal/config"
-	"fme_backend/internal/course"
+	 "fme_backend/internal/course"
+	"fme_backend/internal/student"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
-	 "fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
 	stc "fme_backend/internal/stc"
 
+
 	"time"
-  
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -48,13 +49,12 @@ func main() {
 	mdagroup.PATCH("/update-mda/:id",middleware.RequireAuth, mda.UpdateMda)
 	mdagroup.GET("/get-mda/:id",middleware.RequireAuth, mda.GetMdaByID)
 	mdagroup.GET("/total-mda", middleware.RequireAuth, mda.MdaTotal)
-  mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
+
+    mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
     mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
 	mdagroup.GET("/filter-by-state",middleware.RequireAuth, mda.FilterMdaByState )
-
-
 	// mdagroup.PATCH("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
-	// mdagroup.PATCH("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
+  // mdagroup.PATCH("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
     
      stcgroup := r.Group("/stc")
 	 stcgroup.POST("/create-stc",middleware.RequireFme, stc.CreateFmeStc)
@@ -75,7 +75,9 @@ func main() {
 
   	studentgroup:= r.Group("/student")
 	studentgroup.POST("/create-fme",student.CreateFmeStudent)
-	 studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
+	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
+
+
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
 	studentgroup.GET("/all-fme",middleware.RequireFme,student.GetAllStudents)
 	studentgroup.GET("/fme/:id",middleware.RequireFme,student.GetStudent)
