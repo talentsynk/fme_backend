@@ -46,7 +46,6 @@ func CreateFmeStc(c *gin.Context){
 		Name:              StcCreateSchema.Name,
 		Address:           StcCreateSchema.Address,
 		State: 			   state,
-		isOperational:     true,
         UserID: newUserID,
         Fmestc: true,
     }
@@ -103,7 +102,7 @@ func CreateMdaStc(c *gin.Context){
   tx := config.DB.Begin() // Begin a transaction
 
   // Create user with transaction
-  result, message, newUserID := myuser.CreateStcUser(tx, StcCreateSchema.PhoneNumber, StcCreateSchema.Email, "dfcv")
+  result, message, newUserID := myuser.CreateStcUser(tx,StcCreateSchema.PhoneNumber,  StcCreateSchema.Email, "dfcv")
   if !result {
       tx.Rollback() // Rollback if user creation fails
       c.JSON(http.StatusBadRequest, gin.H{
@@ -114,9 +113,8 @@ func CreateMdaStc(c *gin.Context){
 
   stc := Stc{
     Name:              StcCreateSchema.Name,
-    Address:   StcCreateSchema.Address,
+    Address:           StcCreateSchema.Address,
     State: 			   state,
-    isOperational:     true,
     UserID: newUserID,
     MdaID: mdaID,
 }
@@ -141,11 +139,11 @@ c.JSON(http.StatusOK, gin.H{
 
 func GetStc(c *gin.Context){
      fmt.Println("controller started")
-     userRole := c.GetString("user_role")
-     if userRole != "fme" && userRole != "mda" {
-         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
-         return
-     }
+    //  userRole := c.GetString("user_role")
+    //  if userRole != "fme" && userRole != "mda" {
+    //      c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+    //      return
+    //  }
      limitStr := c.Query("limit")
      pageStr := c.Query("page")
 
@@ -162,36 +160,47 @@ func GetStc(c *gin.Context){
  
      offset := (page - 1) * limit
 
-    var stc []Stc
-    if result := config.DB.Limit(limit).Offset(offset).Find(&stc); result.Error != nil {
+    var stcs []struct{
+        Stc
+        Email    string  `json:"email"`
+        IsActive bool    `json:"is_active"`
+    }
+    if result := config.DB.Table("stcs").
+        Select("stcs.*, users.email, users.is_active").
+        Joins("JOIN users ON stcs.user_id = users.id").
+        Limit(limit).
+        Offset(offset).
+        Find(&stcs); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
-    c.JSON(http.StatusOK, gin.H{"stc":stc})
+    c.JSON(http.StatusOK, gin.H{"stc":stcs})
 }
 
 
 func GetStcByID(c *gin.Context){
-    userRole := c.GetString("user_role")
-    if userRole != "fme" && userRole != "mda" {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
-        return
-    }
     id := c.Param("id")
     if id == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error":"Stc ID is required"})
         return
     }
 
-    var stc Stc
-    if err := config.DB.First(&stc, id).Error; err != nil{
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error":"Stc not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error":"Internal Server Error"})
-        }
-        return
+    var stc struct {
+        Stc
+        Email    string  `json:"email"`
+        IsActive bool    `json:"is_active"`
     }
+    result := config.DB.Table("stcs").
+    Select("mdas.*, users.email, users.is_active").
+    Joins("JOIN users ON stcs.user_id = users.id").
+    First(&stc, id)
+if result.Error != nil {
+    c.JSON(http.StatusNotFound, gin.H{
+        "error": "STC not found",
+    })
+    return
+}
+  
 
     c.JSON(http.StatusOK, stc)
 }
@@ -226,11 +235,20 @@ func SearchStc(c *gin.Context) {
         return
     }
 
-    var stcsearch []Stc
-    if err := config.DB.Where("name LIKE ? OR email LIKE ? OR state LIKE ? OR address LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+    var stcsearch []struct {
+        Stc
+        Email    string `json:"email"`
+        IsActive bool   `json:"is_active"`
+    }
+    if err := config.DB.Table("mdas").
+        Select("stcs.*, users.email, users.is_active").
+        Joins("JOIN users ON stcs.user_id = users.id").
+        Where("name LIKE ? OR address LIKE ? OR state LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%").
+        Find(&stcsearch).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Stcs", "details": err.Error()})
         return
     }
+
 
     if len(stcsearch) == 0 {
         c.JSON(http.StatusOK, gin.H{"message": "No matching stc found"})
@@ -248,14 +266,17 @@ func UpdateStc(c *gin.Context) {
     }
 
     var stc Stc
-    if err := config.DB.First(&stc, id).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-        return
+    if err := config.DB.Table("stcs").
+    Select("stcs.*, users.email, users.is_active").
+    Joins("JOIN users ON stcs.user_id = users.id").
+    First(&stc, id).Error; err != nil {
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
+    } else {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch Stc"})
     }
+    return
+}
 
     if err := c.BindJSON(&stc); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
@@ -308,61 +329,61 @@ func FilterStcAscending(c *gin.Context) {
 
 
 
-func SuspendStc(c *gin.Context) {
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
-        return
-    }
+// func SuspendStc(c *gin.Context) {
+//     id := c.Param("id")
+//     if id == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+//         return
+//     }
 
-    var stc Stc
-    if err := config.DB.First(&stc, id).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-        return
-    }
+//     var stc Stc
+//     if err := config.DB.First(&stc, id).Error; err != nil {
+//         if errors.Is(err, gorm.ErrRecordNotFound) {
+//             c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
+//         } else {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+//         }
+//         return
+//     }
 
-    stc.isOperational = false 
+//     stc.isOperational = false 
 
-    if err := config.DB.Save(&stc).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
-        return
-    }
+//     if err := config.DB.Save(&stc).Error; err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
+//         return
+//     }
 
-    c.JSON(http.StatusOK, gin.H{"suspend":"Stc  Suspended"})
-}
+//     c.JSON(http.StatusOK, gin.H{"suspend":"Stc  Suspended"})
+// }
 
 
 
-func ActivateStc(c *gin.Context) {
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
-        return
-    }
+// func ActivateStc(c *gin.Context) {
+//     id := c.Param("id")
+//     if id == "" {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+//         return
+//     }
 
-    var stc Stc
-    if err := config.DB.First(&stc, id).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-        }
-        return
-    }
+//     var stc Stc
+//     if err := config.DB.First(&stc, id).Error; err != nil {
+//         if errors.Is(err, gorm.ErrRecordNotFound) {
+//             c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
+//         } else {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+//         }
+//         return
+//     }
 
-    stc.isOperational = true 
+//     stc.isOperational = true 
 
-    if err := config.DB.Save(&stc).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate STC"})
-        return
-    }
+//     if err := config.DB.Save(&stc).Error; err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate STC"})
+//         return
+//     }
 
-    c.JSON(http.StatusOK, gin.H{"Activate":"STC Activated"})
-}
+//     c.JSON(http.StatusOK, gin.H{"Activate":"STC Activated"})
+// }
 
 
 
@@ -407,30 +428,4 @@ func StcTotal(c *gin.Context){
         return
     }
     c.JSON(http.StatusOK, gin.H{"total_count":totalCount, "total_is_active":activeCount, "total_in_active":inactiveCount})
-}
-
-func GetTotalStcsByMdaID(c *gin.Context) {
-    mdaIDStr, exists := c.Get("mdaID")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{
-            "message": "Problem with the authorization token",
-        })
-        return
-    }
-    mdaID, ok := mdaIDStr.(uint)
-    if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{
-            "message": "Problem with the authorization token",
-        })
-        return
-    }
-
-    
-    var totalstcs int64
-    if result := config.DB.Model(&Stc{}).Where("mda_id = ?", mdaID).Count(&totalstcs); result.Error != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"totalStcs": totalstcs})
 }

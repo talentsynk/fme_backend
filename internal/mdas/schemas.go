@@ -8,4 +8,3 @@ var MdaCreateSchema struct {
 	Address            string 
 	StateOfOperation   string  
 }
-
