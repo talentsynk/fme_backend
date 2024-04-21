@@ -2,13 +2,13 @@ package main
 
 import (
 	"fme_backend/internal/config"
-	mda "fme_backend/internal/mdas"
 	 "fme_backend/internal/course"
-	
-	middleware "fme_backend/internal/middlewares"
 	"fme_backend/internal/student"
-	stc "fme_backend/internal/stc"
+	mda "fme_backend/internal/mdas"
+	middleware "fme_backend/internal/middlewares"
 	myuser "fme_backend/internal/user"
+	stc "fme_backend/internal/stc"
+
 
 	"time"
 
@@ -49,11 +49,15 @@ func main() {
 	mdagroup.PATCH("/update-mda/:id",middleware.RequireAuth, mda.UpdateMda)
 	mdagroup.GET("/get-mda/:id",middleware.RequireAuth, mda.GetMdaByID)
 	mdagroup.GET("/total-mda", middleware.RequireAuth, mda.MdaTotal)
+
     mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
     mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
 	mdagroup.GET("/filter-by-state",middleware.RequireAuth, mda.FilterMdaByState )
     mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
-	mdagroup.PATCH("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
+	mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
+
+
+
     
      stcgroup := r.Group("/stc")
 	 stcgroup.POST("/create-stc",middleware.RequireFme, stc.CreateFmeStc)
@@ -65,8 +69,8 @@ func main() {
 	 stcgroup.GET("/get-total-count", middleware.RequireAuth,stc.StcTotal)	
      stcgroup.GET("/get-ascending-stc", middleware.RequireAuth, stc.FilterStcAscending)
      stcgroup.GET("/get-descending-stc", middleware.RequireAuth, stc.FilterStcDescending)
-	//  stcgroup.PATCH("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
-	//  stcgroup.PATCH("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
+	 stcgroup.POST("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
+	 stcgroup.POST("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	
 	 
@@ -75,6 +79,8 @@ func main() {
   	studentgroup:= r.Group("/student")
 	studentgroup.POST("/create-fme",student.CreateFmeStudent)
 	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
+
+
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
 	studentgroup.GET("/all-fme",middleware.RequireFme,student.GetAllStudents)
 	studentgroup.GET("/fme/:id",middleware.RequireFme,student.GetStudent)

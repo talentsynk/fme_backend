@@ -309,77 +309,42 @@ func FilterMdaByState(c *gin.Context) {
     // Return the retrieved MDAs as the response
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
-// func SuspendMda(c *gin.Context) {
-//     id := c.Param("id")
-//     if id == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
-//         return
-//     }
 
-//     var mda Mda
-//     if err := config.DB.First(&mda, id).Error; err != nil {
-//         if errors.Is(err, gorm.ErrRecordNotFound) {
-//             c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
-//         } else {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-//         }
-//         return
-//     }
 
-   
-
-//     if err := config.DB.Save(&mda).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Mda"})
-//         return
-//     }
-
-//     c.JSON(http.StatusOK, gin.H{"suspend":"Mda Suspended"})
-// }
 
 
 func SuspendMda(c *gin.Context) {
     id := c.Param("id")
     if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "MDA ID is required"})
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
         return
     }
 
     var mda Mda
     if err := config.DB.First(&mda, id).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "MDA not found"})
+            c.JSON(http.StatusNotFound, gin.H{"error": "mda not found"})
         } else {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
         }
         return
     }
 
-    // Fetch the associated user's IsActive status
-    var mdas struct{
-        IsActive bool   `json:"is_active"`
+    // Retrieve the associated user using the UserID field in the Stc model
+    var user myuser.User
+    if err := config.DB.First(&user, mda.UserID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
+        return
     }
-    if err := config.DB.Joins("JOIN users ON mdas.user_id = users.id").
-    Where("mdas.id = ?", id).
-    First(&mdas).Error; err != nil {
-    fmt.Println("Error fetching associated user:", err)
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
-    return
-}
 
-    // Suspend the MDA only if the associated user is active
-    if mdas.IsActive {
-        // Suspend the MDA by updating its status
-        if err := config.DB.Model(&mda).Update("is_active", false).Error; err != nil {
-            // Log or print the error for debugging
-            fmt.Println("Error updating MDA:", err)
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend MDA"})
-            return
-        }
-        c.JSON(http.StatusOK, gin.H{"suspend": "MDA Suspended"})
-    } else {
-        // Return an error indicating that the associated user is not active
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Associated user is not active"})
+    // Update the IsActive field of the associated user to false
+    user.IsActive = false
+    if err := config.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
+        return
     }
+
+    c.JSON(http.StatusOK, gin.H{"suspend": "Mda Suspended"})
 }
 
 func ActivateMda(c *gin.Context) {
@@ -399,29 +364,21 @@ func ActivateMda(c *gin.Context) {
         return
     }
 
-    // Fetch the associated user's IsActive status using a MySQL join
-   
-    var user struct {
-        IsActive bool `json:"is_active" gorm:"column:is_active"`
-    }
-    if err := config.DB.Table("users").
-        Joins("JOIN mdas ON users.id = mdas.user_id").
-        Where("mdas.id = ?", id).
-        Select("users.is_active").
-        First(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user's activity status"})
+    // Retrieve the associated user using the UserID field in the Stc model
+    var user myuser.User
+    if err := config.DB.First(&user, mda.UserID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
         return
     }
 
-    // Suspend the MDA only if the associated user is active
-    if !user.IsActive {
-        // Suspend the MDA by updating its status
-        if err := config.DB.Model(&mda).UpdateColumn("is_active", true).Error; err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sActivate Mda"})
-            return
-        }
-        c.JSON(http.StatusOK, gin.H{"suspend": "Mda Activate"})
-    } 
+    // Update the IsActive field of the associated user to true
+    user.IsActive = true
+    if err := config.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Mda"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"activate": "Mda Activated"})
 }
 
 

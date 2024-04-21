@@ -329,62 +329,73 @@ func FilterStcAscending(c *gin.Context) {
 
 
 
-// func SuspendStc(c *gin.Context) {
-//     id := c.Param("id")
-//     if id == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
-//         return
-//     }
 
-//     var stc Stc
-//     if err := config.DB.First(&stc, id).Error; err != nil {
-//         if errors.Is(err, gorm.ErrRecordNotFound) {
-//             c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
-//         } else {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-//         }
-//         return
-//     }
+func SuspendStc(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+        return
+    }
 
-//     stc.isOperational = false 
+    var stc Stc
+    if err := config.DB.First(&stc, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+        return
+    }
 
-//     if err := config.DB.Save(&stc).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
-//         return
-//     }
+    // Retrieve the associated user using the UserID field in the Stc model
+    var user myuser.User
+    if err := config.DB.First(&user, stc.UserID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
+        return
+    }
 
-//     c.JSON(http.StatusOK, gin.H{"suspend":"Stc  Suspended"})
-// }
+    // Update the IsActive field of the associated user to false
+    user.IsActive = false
+    if err := config.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
+        return
+    }
 
+    c.JSON(http.StatusOK, gin.H{"suspend": "Stc Suspended"})
+}
+func ActivateStc(c *gin.Context) {
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
+        return
+    }
 
+    var stc Stc
+    if err := config.DB.First(&stc, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Stc not found"})
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+        }
+        return
+    }
 
-// func ActivateStc(c *gin.Context) {
-//     id := c.Param("id")
-//     if id == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Stc ID is required"})
-//         return
-//     }
+    // Retrieve the associated user using the UserID field in the Stc model
+    var user myuser.User
+    if err := config.DB.First(&user, stc.UserID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
+        return
+    }
 
-//     var stc Stc
-//     if err := config.DB.First(&stc, id).Error; err != nil {
-//         if errors.Is(err, gorm.ErrRecordNotFound) {
-//             c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
-//         } else {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-//         }
-//         return
-//     }
+    // Update the IsActive field of the associated user to true
+    user.IsActive = true
+    if err := config.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Stc"})
+        return
+    }
 
-//     stc.isOperational = true 
-
-//     if err := config.DB.Save(&stc).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate STC"})
-//         return
-//     }
-
-//     c.JSON(http.StatusOK, gin.H{"Activate":"STC Activated"})
-// }
-
+    c.JSON(http.StatusOK, gin.H{"activate": "Stc Activated"})
+}
 
 
 func FilterStcByState(c *gin.Context){

@@ -1,8 +1,11 @@
 package config
 
 import (
+
 	"github.com/joho/godotenv"
   "log"
+
+
     "os"
 )
 
@@ -29,6 +32,7 @@ func init() {
         
     }
 }
+
 
 func GetDatabaseURL() string {
 	return os.Getenv("DATABASE_URL")
