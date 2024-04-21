@@ -1,7 +1,6 @@
 package mda
 
 import (
-	
 	"gorm.io/gorm"
 )
 

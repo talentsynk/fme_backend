@@ -9,7 +9,6 @@ type Stc struct {
 	Name                         string  `gorm:"not null"`
 	Address                      string  `gorm:"not null"`
 	State                        string  `gorm:"not null"`
-	isOperational                bool   
 	Fmestc                       bool
 	MdaID                        uint
 	UserID                       uint	

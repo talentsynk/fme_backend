@@ -415,7 +415,6 @@ func CreateMdaUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string
   
 	// Setup the user create instance
 	user := User{
-	  PhoneNumber: phoneNumber,
 	  Email: email,
 	  Password: string(hash),
 	  OTPExpiresAt: time.Now(),
@@ -446,7 +445,6 @@ func CreateStcUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string
   
 	// Setup the user create instance
 	user := User{
-	  PhoneNumber: phoneNumber,
 	  Email: email,
 	  Password: string(hash),
 	  OTPExpiresAt: time.Now(),
