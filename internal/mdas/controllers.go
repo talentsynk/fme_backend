@@ -90,7 +90,8 @@ func GetAllMdas(c *gin.Context) {
     }
 
     if result := config.DB.Table("mdas").
-        Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
+        // Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
+	 Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id"). // Fixed join condition
@@ -131,7 +132,8 @@ func GetMdaByID(c *gin.Context) {
     }
 
     result := config.DB.Table("mdas").
-        Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
+        // Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count")./
+	Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id").
@@ -161,6 +163,8 @@ func UpdateMda(c *gin.Context) {
     if err := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
+        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+        Joins("LEFT JOIN students ON mdas.id = students.mda_id").
         First(&mda, id).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             c.JSON(http.StatusNotFound, gin.H{"error": "Mda not found"})
@@ -198,12 +202,17 @@ func SearchMda(c *gin.Context) {
         Mda
         Email    string `json:"email"`
         IsActive bool   `json:"is_active"`
+        STCCount  int    `json:"stc_count"`
+        StudentCount int  `json:"student_count"`
     }
 
     // Update the SQL query to include the email and isActive fields from the users table
     if err := config.DB.Table("mdas").
-        Select("mdas.*, users.email, users.is_active").
+        // Select("mdas.*, users.email, users.is_active").
+	 Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
         Joins("JOIN users ON mdas.user_id = users.id").
+        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+        Joins("LEFT JOIN students ON mdas.id = students.mda_id").
         Where("register_name LIKE ? OR address LIKE ? OR state_of_operation LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%").
         Find(&mdasearch).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for MDAs", "details": err.Error()})
