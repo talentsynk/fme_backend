@@ -11,7 +11,6 @@ var CreateStudentSchema struct {
 	StateOfOrigin string
 	StateOfResidence string
 	Email string
-	PhoneNumber string
 	DOBstring string
 	SID		string
 	NsqLevel	string

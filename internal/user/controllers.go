@@ -400,7 +400,7 @@ func ChangePassword(c *gin.Context) {
 	})
 }
 
-func CreateMdaUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string,uint){
+func CreateMdaUser(tx *gorm.DB, email, password string) (bool,string,uint){
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
@@ -430,7 +430,7 @@ func CreateMdaUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string
 	return true, "user created succesfully", user.ID
 }
 
-func CreateStcUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string,uint){
+func CreateStcUser(tx *gorm.DB, email, password string) (bool,string,uint){
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
@@ -460,7 +460,7 @@ func CreateStcUser(tx *gorm.DB,phoneNumber, email, password string) (bool,string
 	return true, "user created succesfully", user.ID
 }
 
-func CreateStudentUser(tx *gorm.DB, phoneNumber, email, password string) (bool, string, uint) {
+func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint) {
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
@@ -475,7 +475,6 @@ func CreateStudentUser(tx *gorm.DB, phoneNumber, email, password string) (bool, 
   
 	// Setup the user create instance
 	user := User{
-	  PhoneNumber: phoneNumber,
 	  Email: email,
 	  Password: string(hash),
 	  OTPExpiresAt: time.Now(),

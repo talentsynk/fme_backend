@@ -60,7 +60,7 @@ func CreateFmeStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -175,7 +175,7 @@ func CreateMdaStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -273,7 +273,7 @@ func CreateStcStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
