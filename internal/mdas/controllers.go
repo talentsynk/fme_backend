@@ -55,7 +55,7 @@ func CreateMda(c *gin.Context) {
     if mdaresult.Error != nil {
         tx.Rollback() 
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to create User",
+            "error": "Failed to create Mda",
         })
         return
     }

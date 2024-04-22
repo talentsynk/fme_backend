@@ -19,6 +19,7 @@ type Student struct {
 	NsqLevel		string `gorm:"type:varchar(255)"`
 	Address		string `gorm:"type:varchar(255)"`
 	GraduationStatus bool 
+	PhoneNumber	string 		`gorm:"unique"`
 	Fmestudent        bool
 	UserID uint
 	MdaID uint

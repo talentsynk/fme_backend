@@ -27,7 +27,7 @@ func CreateFmeUser(c *gin.Context) {
 	}
 
 	var userCheck User
-	config.DB.Where("email= ?", LoginSchema.Email).First(&userCheck)
+	config.DB.Where("email= ?", UserCreateSchema.Email).First(&userCheck)
 	if userCheck.ID != 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "User already exists",
@@ -55,8 +55,6 @@ func CreateFmeUser(c *gin.Context) {
 
 	// setup the user create instance
 	user:= User{
-		
-		PhoneNumber: UserCreateSchema.PhoneNumber,
 		Email: UserCreateSchema.Email,
 		Password: string(hash),
 		OTPExpiresAt: time.Now(),
@@ -460,7 +458,7 @@ func CreateStcUser(tx *gorm.DB, email, password string) (bool,string,uint){
 	return true, "user created succesfully", user.ID
 }
 
-func CreateStudentUser(tx *gorm.DB,phone, email, password string) (bool, string, uint) {
+func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint) {
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
@@ -473,9 +471,6 @@ func CreateStudentUser(tx *gorm.DB,phone, email, password string) (bool, string,
 	  return false, "Unable to hash password", 0
 	}
 
-	if !utilities.IsNigerianPhoneNumber(phone) {
-		return false, "wrong phone number", 0
-	}
   
 	// Setup the user create instance
 	user := User{

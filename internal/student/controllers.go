@@ -40,6 +40,14 @@ func CreateFmeStudent(c *gin.Context) {
         return
     }
 
+    if !utilities.IsNigerianPhoneNumber(CreateStudentSchema.PhoneNumber){
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect phone number",
+        })
+        return
+    }
+
+
     dOB, err := utilities.ParseDoB(CreateStudentSchema.DOBstring)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
@@ -60,7 +68,7 @@ func CreateFmeStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -81,6 +89,7 @@ func CreateFmeStudent(c *gin.Context) {
         SID: CreateStudentSchema.SID,
         NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
+        PhoneNumber: CreateStudentSchema.PhoneNumber,
     }
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
@@ -147,6 +156,14 @@ func CreateMdaStudent(c *gin.Context) {
         return
     }
 
+    if !utilities.IsNigerianPhoneNumber(CreateStudentSchema.PhoneNumber){
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect phone number",
+        })
+        return
+    }
+
+
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
@@ -175,7 +192,7 @@ func CreateMdaStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -193,6 +210,7 @@ func CreateMdaStudent(c *gin.Context) {
         DOB: dOB,
         UserID: newUserID,
         MdaID: mdaID,
+        PhoneNumber: CreateStudentSchema.PhoneNumber,
     }
     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
@@ -253,6 +271,13 @@ func CreateStcStudent(c *gin.Context) {
         return
     }
 
+    if !utilities.IsNigerianPhoneNumber(CreateStudentSchema.PhoneNumber){
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect phone number",
+        })
+        return
+    }
+
     dOB, err := utilities.ParseDoB(CreateStudentSchema.DOBstring)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
@@ -273,7 +298,7 @@ func CreateStcStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -291,6 +316,7 @@ func CreateStcStudent(c *gin.Context) {
         DOB: dOB,
         UserID: newUserID,
         StcID: stcID,
+        PhoneNumber: CreateStudentSchema.PhoneNumber,
     }
     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
@@ -338,14 +364,15 @@ func GetAllStudents(c *gin.Context) {
     switch (userID) {
     case 1:
         err := config.DB.Table("students").
-        Select("students.id AS student_id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken").
+        Select("students.id AS student_id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
-        Group("students.id").
+        Group("students.id, users.is_active, users.email").
         Offset(offset).
         Limit(limit).
         Scan(&students).Error
+
         if err!=nil {
             c.JSON(http.StatusBadRequest,gin.H{
                 "message":"error retrieving students",
@@ -394,13 +421,15 @@ func GetStudent(c *gin.Context) {
     switch (userID) {
     case 1:
         err := config.DB.Table("students").
-        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, users.is_active AS is_active, users.phone_number AS phone_number, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, students.created_at AS created_at").
+        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, students.phone_number AS phone_number, users.is_active AS is_active,  users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, MAX(students.created_at) AS created_at").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
         Where("students.id = ?", id).
-        Group("students.id").
+        Group("students.id, users.is_active, users.email, students.firstname, students.lastname, students.phone_number, students.gender, students.state_of_residence, students.address").
         Scan(&student).Error
+
+
         if err!=nil {
             c.JSON(http.StatusBadRequest,gin.H{
                 "message":"error retrieving students",
