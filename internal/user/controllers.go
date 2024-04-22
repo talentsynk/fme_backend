@@ -460,7 +460,7 @@ func CreateStcUser(tx *gorm.DB, email, password string) (bool,string,uint){
 	return true, "user created succesfully", user.ID
 }
 
-func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint) {
+func CreateStudentUser(tx *gorm.DB,phone, email, password string) (bool, string, uint) {
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
@@ -471,6 +471,10 @@ func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 	  return false, "Unable to hash password", 0
+	}
+
+	if !utilities.IsNigerianPhoneNumber(phone) {
+		return false, "wrong phone number", 0
 	}
   
 	// Setup the user create instance

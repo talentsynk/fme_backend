@@ -60,7 +60,7 @@ func CreateFmeStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -175,7 +175,7 @@ func CreateMdaStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -273,7 +273,7 @@ func CreateStcStudent(c *gin.Context) {
     tx := config.DB.Begin() // Begin a transaction
 
     // Create user with transaction
-    result, message, newUserID := myuser.CreateStudentUser(tx, CreateStudentSchema.Email, "dfcv")
+    result, message, newUserID := myuser.CreateStudentUser(tx,CreateStudentSchema.PhoneNumber, CreateStudentSchema.Email, "dfcv")
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
@@ -394,7 +394,7 @@ func GetStudent(c *gin.Context) {
     switch (userID) {
     case 1:
         err := config.DB.Table("students").
-        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, students.created_at AS created_at").
+        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, users.is_active AS is_active, users.phone_number AS phone_number, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, students.created_at AS created_at").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").

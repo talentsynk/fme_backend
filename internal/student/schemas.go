@@ -8,6 +8,7 @@ var CreateStudentSchema struct {
 	Firstname string
 	Lastname string
 	Gender string
+	PhoneNumber	string
 	StateOfOrigin string
 	StateOfResidence string
 	Email string
@@ -39,4 +40,5 @@ type GetStudentSchema struct {
 	StateOfResidence	string
 	Address			string
 	CreatedAt		time.Time
+	PhoneNumber		string
 }
