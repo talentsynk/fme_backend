@@ -2,6 +2,7 @@ package student
 
 import (
 	"fme_backend/internal/config"
+	"fme_backend/internal/course"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
 	"fmt"
@@ -17,7 +18,7 @@ import (
 func CreateFmeStudent(c *gin.Context) {
     if c.Bind(&CreateStudentSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to read request body",
+            "message": "Failed to read request body",
         })
         return
     }
@@ -26,7 +27,7 @@ func CreateFmeStudent(c *gin.Context) {
     stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of origin",
+            "message": "Incorrect state of origin",
         })
         return
     }
@@ -34,7 +35,7 @@ func CreateFmeStudent(c *gin.Context) {
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of residence",
+            "message": "Incorrect state of residence",
         })
         return
     }
@@ -42,7 +43,7 @@ func CreateFmeStudent(c *gin.Context) {
     dOB, err := utilities.ParseDoB(CreateStudentSchema.DOBstring)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect date format",
+            "message": "Incorrect date format",
         })
         return
     }
@@ -50,7 +51,7 @@ func CreateFmeStudent(c *gin.Context) {
     gender, result := utilities.ValidateGender(CreateStudentSchema.Gender)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect Gender",
+            "message": "Incorrect Gender",
         })
         return
     }
@@ -63,7 +64,7 @@ func CreateFmeStudent(c *gin.Context) {
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": message,
+            "message": message,
         })
         return
     }
@@ -77,13 +78,29 @@ func CreateFmeStudent(c *gin.Context) {
         DOB: dOB,
         UserID: newUserID,
         Fmestudent: true,
+        SID: CreateStudentSchema.SID,
+        NsqLevel: CreateStudentSchema.NsqLevel,
+        Address: CreateStudentSchema.Address,
     }
-     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to create User",
+            "message": "Failed to create User",
+        })
+        return
+    }
+
+    // Add Course
+    studentcourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID: CreateStudentSchema.CourseID,
+    }
+    studentCourseResult := tx.Create(&studentcourse) // Create student within transaction
+    if studentCourseResult.Error != nil {
+        tx.Rollback() // Rollback if student creation fails
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to create User",
         })
         return
     }
@@ -116,7 +133,7 @@ func CreateMdaStudent(c *gin.Context) {
 	// bind the post data
 	if c.Bind(&CreateStudentSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to read request body",
+            "message": "Failed to read request body",
         })
         return
     }
@@ -125,7 +142,7 @@ func CreateMdaStudent(c *gin.Context) {
     stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of origin",
+            "message": "Incorrect state of origin",
         })
         return
     }
@@ -133,7 +150,7 @@ func CreateMdaStudent(c *gin.Context) {
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of residence",
+            "message": "Incorrect state of residence",
         })
         return
     }
@@ -141,7 +158,7 @@ func CreateMdaStudent(c *gin.Context) {
     dOB, err := utilities.ParseDoB(CreateStudentSchema.DOBstring)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect date format",
+            "message": "Incorrect date format",
         })
         return
     }
@@ -149,7 +166,7 @@ func CreateMdaStudent(c *gin.Context) {
     gender, result := utilities.ValidateGender(CreateStudentSchema.Gender)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect Gender",
+            "message": "Incorrect Gender",
         })
         return
     }
@@ -162,7 +179,7 @@ func CreateMdaStudent(c *gin.Context) {
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": message,
+            "message": message,
         })
         return
     }
@@ -182,7 +199,7 @@ func CreateMdaStudent(c *gin.Context) {
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to create User",
+            "message": "Failed to create User",
         })
         return
     }
@@ -214,7 +231,7 @@ func CreateStcStudent(c *gin.Context) {
 
 	if c.Bind(&CreateStudentSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Failed to read request body",
+            "message": "Failed to read request body",
         })
         return
     }
@@ -223,7 +240,7 @@ func CreateStcStudent(c *gin.Context) {
     stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of origin",
+            "message": "Incorrect state of origin",
         })
         return
     }
@@ -231,7 +248,7 @@ func CreateStcStudent(c *gin.Context) {
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect state of residence",
+            "message": "Incorrect state of residence",
         })
         return
     }
@@ -239,7 +256,7 @@ func CreateStcStudent(c *gin.Context) {
     dOB, err := utilities.ParseDoB(CreateStudentSchema.DOBstring)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect date format",
+            "message": "Incorrect date format",
         })
         return
     }
@@ -247,7 +264,7 @@ func CreateStcStudent(c *gin.Context) {
     gender, result := utilities.ValidateGender(CreateStudentSchema.Gender)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": "Incorrect Gender",
+            "message": "Incorrect Gender",
         })
         return
     }
@@ -260,7 +277,7 @@ func CreateStcStudent(c *gin.Context) {
     if !result {
         tx.Rollback() // Rollback if user creation fails
         c.JSON(http.StatusBadRequest, gin.H{
-            "error": message,
+            "message": message,
         })
         return
     }
@@ -293,15 +310,11 @@ func CreateStcStudent(c *gin.Context) {
 }
 
 func GetAllStudents(c *gin.Context) {
-	limitStr := c.Query("limit")
     pageStr := c.Query("page")
-    mdaIDStr := c.Query("mda_id")
-    stcIDStr := c.Query("stc_id")
+    // mdaIDStr := c.Query("mda_id")
+    // stcIDStr := c.Query("stc_id")
 
-    limit, err := strconv.Atoi(limitStr)
-    if err != nil || limit <= 0 {
-        limit = 10 // Default limit
-    }
+    limit:= 100
 
     page, err := strconv.Atoi(pageStr)
     if err != nil || page <= 0 {
@@ -309,41 +322,48 @@ func GetAllStudents(c *gin.Context) {
     }
 
     offset := (page - 1) * limit
+    userIDstr,exists := c.Get("userID")
 
-	
-
-    // Build the query with optional filtering
-    query := config.DB.Select("id","firstname","lastname","dob","state_of_origin","state_of_residence","gender","graduation_status").Offset(offset).Limit(limit)
-    if mdaIDStr != "" {
-        mdaID, err := strconv.Atoi(mdaIDStr)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "invalid mda_id"})
-            return
-        }
-        query = query.Where("mda_id = ?", mdaID)
-    } else if stcIDStr != "" {
-        stcID, err := strconv.Atoi(stcIDStr)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "invalid stc_id"})
-            return
-        }
-        query = query.Where("stc_id = ?", stcID)
-    }
-	var students []Student
-	result := query.Find(&students)
-    if result.Error != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{
-        "students": students,
-    })
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+    var students []GetAllStudentSchema
+    switch (userID) {
+    case 1:
+        err := config.DB.Table("students").
+        Select("students.id AS student_id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken").
+        Joins("JOIN users ON students.user_id = users.id").
+        Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+        Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
+        Group("students.id").
+        Offset(offset).
+        Limit(limit).
+        Scan(&students).Error
+        if err!=nil {
+            c.JSON(http.StatusBadRequest,gin.H{
+                "message":"error retrieving students",
+            })
+            return
+        }
+        c.JSON(http.StatusOK,gin.H{"students":students})
+
+    default:
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
+        return
+    }
+
 }
 
 func GetStudent(c *gin.Context) {
-	// GET ID
-	idStr:= c.Param("id")
+    // GET ID
+	idStr := c.Param("id")
 	if idStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter not provided",
@@ -351,26 +371,48 @@ func GetStudent(c *gin.Context) {
 		return
 	}
 	// Convert id to string
-	id,err :=strconv.Atoi(idStr)
-	if err!= nil {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter invalid",
 		})
 		return
 	}
 
-	var student Student
-	instance_result := config.DB.Select("id","firstname","lastname","dob","state_of_origin","state_of_residence","gender","graduation_status").First(&student, id)
-	fmt.Println(id)
+    userIDstr,exists := c.Get("userID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
 
-	if instance_result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "instance does not exist",
-		})
-		return
-	}
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+    var student GetStudentSchema
+    switch (userID) {
+    case 1:
+        err := config.DB.Table("students").
+        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, GROUP_CONCAT(courses.name SEPARATOR ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, students.created_at AS created_at").
+        Joins("JOIN users ON students.user_id = users.id").
+        Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+        Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
+        Where("students.id = ?", id).
+        Group("students.id").
+        Scan(&student).Error
+        if err!=nil {
+            c.JSON(http.StatusBadRequest,gin.H{
+                "message":"error retrieving students",
+            })
+            return
+        }
+        c.JSON(http.StatusOK,gin.H{"students":student})
 
-	c.JSON(http.StatusOK, student)
+    default:
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
+        return
+    }
 }
 
 

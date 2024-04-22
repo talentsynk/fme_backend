@@ -9,7 +9,7 @@ import (
 type User struct {
     gorm.Model
     
-    PhoneNumber    string         `gorm:"unique;not null"`
+    PhoneNumber    string         `gorm:"unique"`
     Email          string         `gorm:"unique;not null"`
     Password       string         `gorm:"not null"`
     OTP            string         

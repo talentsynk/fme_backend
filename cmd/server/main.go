@@ -82,8 +82,8 @@ func main() {
 
 
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
-	studentgroup.GET("/all-fme",middleware.RequireFme,student.GetAllStudents)
-	studentgroup.GET("/fme/:id",middleware.RequireFme,student.GetStudent)
+	studentgroup.GET("/all",middleware.RequireFme,student.GetAllStudents)
+	studentgroup.GET("/:id",middleware.RequireFme,student.GetStudent)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create",middleware.RequireFme,course.CreateCategory)

@@ -16,3 +16,24 @@ type Category struct {
 	Description string `gorm:"not null"`
 	Courses     Course
 }
+
+type StudentCourse struct{
+	gorm.Model
+	CourseID uint	`gorm:"not null"`
+	StudentID uint	`gorm:"not null"`
+	IsCertified	bool
+}
+
+type MdaCourse struct{
+	gorm.Model
+	CourseID uint	`gorm:"not null"`
+	MdaID uint	`gorm:"not null"`
+	// IsCertified	bool
+}
+
+type StcCourse struct{
+	gorm.Model
+	CourseID uint	`gorm:"not null"`
+	StcID uint	`gorm:"not null"`
+	// IsCertified	bool
+}

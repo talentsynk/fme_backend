@@ -10,3 +10,19 @@ var CreateCategorySchema struct {
 	Name        string
 	Description string
 }
+
+type GetCourseSchema struct {
+	Id				uint
+	TotalStudents	uint	
+	TotalMda		uint
+	TotalStc		uint
+	Description		string
+	Name			string
+	}
+
+
+type GetAllCoursesSchema struct {
+	Id uint
+	Name string
+	Description string
+}

@@ -12,9 +12,12 @@ type Student struct {
 	Firstname     string    `gorm:"type:varchar(255); not null"`
 	Lastname      string     `gorm:"type:varchar(255); not null"`
 	DOB           time.Time  `gorm:"type:date; not null"`
-	StateOfOrigin string     `gorm:"type:varchar(255); not null"`
+	StateOfOrigin string     `gorm:"type:varchar(255)"`
 	StateOfResidence string   `gorm:"type:varchar(255); not null"`
 	Gender          string      `gorm:"type:varchar(255)"`
+	SID				string `gorm:"type:varchar(255)"`
+	NsqLevel		string `gorm:"type:varchar(255)"`
+	Address		string `gorm:"type:varchar(255)"`
 	GraduationStatus bool 
 	Fmestudent        bool
 	UserID uint
