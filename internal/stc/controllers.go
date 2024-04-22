@@ -63,7 +63,7 @@ func CreateFmeStc(c *gin.Context){
     tx.Commit() // Commit the transaction if both creations are successful
     // Success response
     c.JSON(http.StatusOK, gin.H{
-        "message": "Stc created successfully",
+        "message": "Student created successfully",
     })
 }
 
@@ -130,7 +130,7 @@ if stcresult.Error != nil {
 
 tx.Commit() 
 c.JSON(http.StatusOK, gin.H{
-    "message": "Stc created successfully",
+    "message": "Student created successfully",
 })
 }
 
