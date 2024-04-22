@@ -23,6 +23,8 @@ func main() {
 		&course.Category{},
 		&course.Course{},
 		&stc.Stc{},
-		
+		&course.StudentCourse{},
+		&course.MdaCourse{},
+		&course.StcCourse{},
 	)
 }

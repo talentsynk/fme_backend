@@ -33,7 +33,7 @@ func CreateCourse(c *gin.Context) {
 	result := config.DB.Create(&course)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create course",
+			"message": "Failed to create course",
 		})
 		return
 	}
@@ -65,7 +65,7 @@ func CreateCategory(c *gin.Context) {
 	result := config.DB.Create(&category)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to create Category",
+			"message": "Failed to create Category",
 		})
 		return
 	}
@@ -74,34 +74,58 @@ func CreateCategory(c *gin.Context) {
 }
 
 func GetCourse(c *gin.Context) {
-	// GET ID
-	idStr := c.Param("id")
-	if idStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "path parameter not provided",
-		})
-		return
-	}
-	// Convert id to string
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "path parameter invalid",
-		})
-		return
-	}
-
-	// FIND IF THE COURSE EXIST
-	var instance Course
-	instance_result := config.DB.Select("id", "name", "description").First(&instance, id)
-	if instance_result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "instance does not exist",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, instance)
+	 // GET ID
+	 idStr := c.Param("id")
+	 if idStr == "" {
+		 c.JSON(http.StatusBadRequest, gin.H{
+			 "message": "path parameter not provided",
+		 })
+		 return
+	 }
+	 // Convert id to string
+	 id, err := strconv.Atoi(idStr)
+	 if err != nil {
+		 c.JSON(http.StatusBadRequest, gin.H{
+			 "message": "path parameter invalid",
+		 })
+		 return
+	 }
+ 
+	 userIDstr,exists := c.Get("userID")
+	 if !exists{
+		 c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+		 return
+	 }
+ 
+	 userID,ok := userIDstr.(uint)
+	 if !ok {
+		 c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+		 return
+	 }
+	 var course GetCourseSchema
+	 switch (userID) {
+	 case 1:
+		err := config.DB.Table("courses").
+        Select("COUNT(DISTINCT students.id) AS total_students, COUNT(DISTINCT mda_courses.mda_id) AS total_mda, COUNT(DISTINCT stc_courses.stc_id) AS total_stc, courses.description AS description, courses.name AS name, courses.id AS id").
+        Joins("LEFT JOIN student_courses ON courses.id = student_courses.course_id").
+        Joins("LEFT JOIN students ON student_courses.student_id = students.id").
+        Joins("LEFT JOIN mda_courses ON courses.id = mda_courses.course_id").
+        Joins("LEFT JOIN stc_courses ON courses.id = stc_courses.course_id").
+        Where("courses.id = ?", id).
+        Group("courses.id").
+        Scan(&course).Error
+		 if err!=nil {
+			 c.JSON(http.StatusBadRequest,gin.H{
+				 "message":"error retrieving students",
+			 })
+			 return
+		 }
+		 c.JSON(http.StatusOK,gin.H{"course":course})
+ 
+	 default:
+		 c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
+		 return
+	 }
 }
 
 func GetCoursesByName(c *gin.Context) {
@@ -121,50 +145,35 @@ func GetCoursesByName(c *gin.Context) {
 }
 
 func GetAllCourses(c *gin.Context) {
-	var courses []Course
-	var count int64
-
-	// Find all courses from the database
-	result := config.DB.Select("id", "name", "description").Find(&courses)
-	if result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "no course found"})
+	userIDstr,exists := c.Get("userID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
 		return
 	}
 
-	totalCourses := config.DB.Model(&Course{}).Count(&count)
-	if totalCourses.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "unable to get total courses"})
+	userID,ok := userIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
 		return
 	}
+	var courses []GetAllCoursesSchema
+	switch (userID) {
+	case 1:
+	   err := config.DB.Table("courses").
+	   Select("id,name,description").
+	   Find(&courses).Error
+		if err!=nil {
+			c.JSON(http.StatusBadRequest,gin.H{
+				"message":"error retrieving students",
+			})
+			return
+		}
+		c.JSON(http.StatusOK,gin.H{"course":courses})
 
-	// Respond with the list of courses
-	c.JSON(200, gin.H{
-		"courses":       courses,
-		"total_courses": count,
-	})
-}
-
-func GetCategory(c *gin.Context) {
-	// GET ID
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"message": "path parameter not provided",
-		})
+	default:
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
 		return
 	}
-
-	// FIND IF THE COURSE EXIST
-	var instance Category
-	instance_result := config.DB.Select("id", "name", "description").First(&instance, id)
-	if instance_result.Error != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "Category does not exist",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, instance)
 }
 
 func GetAllCategories(c *gin.Context) {
@@ -188,4 +197,8 @@ func GetAllCategories(c *gin.Context) {
 		"Categories":       categories,
 		"total_Categories": count,
 	})
+}
+
+func GetCategory(c *gin.Context) {
+
 }
