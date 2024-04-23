@@ -3,12 +3,14 @@ package mda
 import (
 	"errors"
 	"fme_backend/internal/config"
-    myuser "fme_backend/internal/user"
+	myuser "fme_backend/internal/user"
+	"fme_backend/internal/utilities"
 	"fmt"
 	"net/http"
 	"sort"
-    "strconv"
-    "fme_backend/internal/utilities"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -82,23 +84,24 @@ func GetAllMdas(c *gin.Context) {
     offset := (page - 1) * limit
 
     var mdas []struct {
-        Mda
-        Email        string `json:"email"`
+        Id          uint
+        StateOfOperation    string
+        Name        string
+        Address      string
         IsActive     bool   `json:"is_active"`
         STCCount     int    `json:"stc_count"`
         StudentCount int    `json:"student_count"`
     }
 
     if result := config.DB.Table("mdas").
-        // Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
-	 Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
-        Joins("JOIN users ON mdas.user_id = users.id").
-        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
-        Joins("LEFT JOIN students ON mdas.id = students.mda_id"). // Fixed join condition
-        Group("mdas.id").
-        Limit(limit).
-        Offset(offset).
-        Find(&mdas); result.Error != nil {
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address,mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count").
+    Joins("JOIN users ON mdas.user_id = users.id").
+    Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+    Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+    Group("mdas.id, mdas.register_name, mdas.address, users.is_active,mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
+    Limit(limit).
+    Offset(offset).
+    Find(&mdas); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
@@ -124,7 +127,11 @@ func GetMdaByID(c *gin.Context) {
     }
 
     var mda struct {
-        Mda
+        Id      uint
+        Name       string
+        CreatedAt   time.Time
+        CourseCount     uint
+        Address         string
         Email     string `json:"email"`
         IsActive  bool   `json:"is_active"`
         STCCount  int    `json:"stc_count"`
@@ -132,12 +139,12 @@ func GetMdaByID(c *gin.Context) {
     }
 
     result := config.DB.Table("mdas").
-        // Select("mdas.*, users.email, users.is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count")./
-	Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
+        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id").
-        Group("mdas.id").
+        Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+        Group("mdas.id, mdas.register_name, mdas.address, users.is_active,users.email").
         First(&mda, id)
 
     if result.Error != nil {
