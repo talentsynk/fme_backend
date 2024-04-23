@@ -91,14 +91,15 @@ func GetAllMdas(c *gin.Context) {
         IsActive     bool   `json:"is_active"`
         STCCount     int    `json:"stc_count"`
         StudentCount int    `json:"student_count"`
+        UserId  uint
     }
 
     if result := config.DB.Table("mdas").
-    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address,mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count").
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address,mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count").
     Joins("JOIN users ON mdas.user_id = users.id").
     Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
     Joins("LEFT JOIN students ON mdas.id = students.mda_id").
-    Group("mdas.id, mdas.register_name, mdas.address, users.is_active,mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
+    Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
     Limit(limit).
     Offset(offset).
     Find(&mdas); result.Error != nil {
@@ -136,15 +137,16 @@ func GetMdaByID(c *gin.Context) {
         IsActive  bool   `json:"is_active"`
         STCCount  int    `json:"stc_count"`
         StudentCount int  `json:"student_count"`
+        UserId      uint
     }
 
     result := config.DB.Table("mdas").
-        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id").
         Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
-        Group("mdas.id, mdas.register_name, mdas.address, users.is_active,users.email").
+        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id,users.email").
         First(&mda, id)
 
     if result.Error != nil {

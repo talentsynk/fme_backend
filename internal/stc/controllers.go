@@ -138,43 +138,46 @@ c.JSON(http.StatusOK, gin.H{
 
 
 func GetStc(c *gin.Context){
-     fmt.Println("controller started")
-    //  userRole := c.GetString("user_role")
-    //  if userRole != "fme" && userRole != "mda" {
-    //      c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
-    //      return
-    //  }
-     limitStr := c.Query("limit")
-     pageStr := c.Query("page")
+    limitStr := c.Query("limit")
+    pageStr := c.Query("page")
 
-
-
-     limit, err := strconv.Atoi(limitStr)
-    if err != nil || limit <= 0{
+    limit, err := strconv.Atoi(limitStr)
+    if err != nil || limit <= 0 {
         limit = 100
     }
-     page, err := strconv.Atoi(pageStr)
-     if err != nil || page <= 0 {
-         page = 1
-     }
- 
-     offset := (page - 1) * limit
 
-    var stcs []struct{
-        Stc
-        Email    string  `json:"email"`
-        IsActive bool    `json:"is_active"`
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page <= 0 {
+        page = 1
     }
+
+    offset := (page - 1) * limit
+
+    var stcs []struct {
+        Id          uint
+        StateOfOperation    string
+        Name        string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        StudentCount int    `json:"student_count"`
+        CourseCount     uint
+        UserId          uint
+    }
+
     if result := config.DB.Table("stcs").
-        Select("stcs.*, users.email, users.is_active").
-        Joins("JOIN users ON stcs.user_id = users.id").
-        Limit(limit).
-        Offset(offset).
-        Find(&stcs); result.Error != nil {
+    Select("stcs.id AS id, stcs.name AS name, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
+    Joins("JOIN users ON stcs.user_id = users.id").
+    Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+    Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Limit(limit).
+    Offset(offset).
+    Find(&stcs); result.Error != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
-    c.JSON(http.StatusOK, gin.H{"stc":stcs})
+
+    c.JSON(http.StatusOK, gin.H{"stcs": stcs})
 }
 
 
