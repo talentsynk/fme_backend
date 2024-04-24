@@ -360,8 +360,21 @@ func GetAllStudents(c *gin.Context) {
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
         return
     }
+    userRoleStr,exists := c.Get("userRole")
+
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user role"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint role"})
+        return
+    }
+
     var students []GetAllStudentSchema
-    switch (userID) {
+    switch (userRole) {
     case 1:
         err := config.DB.Table("students").
         Select("students.id AS student_id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
@@ -382,6 +395,7 @@ func GetAllStudents(c *gin.Context) {
         c.JSON(http.StatusOK,gin.H{"students":students})
 
     default:
+        fmt.Println(userID)
         c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
         return
     }
@@ -417,8 +431,22 @@ func GetStudent(c *gin.Context) {
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
         return
     }
+    userRoleStr,exists := c.Get("userRole")
+
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+
     var student GetStudentSchema
-    switch (userID) {
+    switch (userRole) {
     case 1:
         err := config.DB.Table("students").
         Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, students.phone_number AS phone_number, users.is_active AS is_active,  users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, MAX(students.created_at) AS created_at").
@@ -439,6 +467,7 @@ func GetStudent(c *gin.Context) {
         c.JSON(http.StatusOK,gin.H{"students":student})
 
     default:
+        fmt.Println(userID)
         c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
         return
     }
