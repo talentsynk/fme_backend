@@ -77,7 +77,7 @@ func main() {
 
 
   	studentgroup:= r.Group("/student")
-	studentgroup.POST("/create-fme",student.CreateFmeStudent)
+	studentgroup.POST("/create-fme",middleware.RequireFme,student.CreateFmeStudent)
 	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
 
 
