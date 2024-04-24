@@ -45,7 +45,7 @@ func CreateMda(c *gin.Context) {
    }
 
     mda := Mda{
-        RegisterName:MdaCreateSchema.RegisterName,
+        Name:MdaCreateSchema.Name,
         Address:MdaCreateSchema.Address,
         StateOfOperation:stateOfOperation,
         // PhoneNumber: MdaCreateSchema.PhoneNumber,
