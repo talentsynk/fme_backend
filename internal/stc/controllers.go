@@ -155,7 +155,7 @@ func GetStc(c *gin.Context){
 
     var stcs []struct {
         Id          uint
-        State    string
+        StateOfOperation string
         Name        string
         Address      string
         IsActive     bool   `json:"is_active"`
