@@ -2,7 +2,7 @@ package   mda
 
 
 var MdaCreateSchema struct {
-	RegisterName       string 
+ Name               string 
 	Email              string 
 	PhoneNumber        string
 	Address            string 
