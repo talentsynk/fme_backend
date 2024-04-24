@@ -155,7 +155,7 @@ func GetStc(c *gin.Context){
 
     var stcs []struct {
         Id          uint
-        StateOfOperation    string
+        StateOfOperation string
         Name        string
         Address      string
         IsActive     bool   `json:"is_active"`
@@ -189,23 +189,33 @@ func GetStcByID(c *gin.Context){
     }
 
     var stc struct {
-        Stc
-        Email    string  `json:"email"`
-        IsActive bool    `json:"is_active"`
+        Id          uint
+        Name        string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        StudentCount int    `json:"student_count"`
+        CertifiedStudentCount   uint
+        NonCertifedStudentCount     uint
+        CourseCount     uint
+        UserId          uint
     }
     result := config.DB.Table("stcs").
-    Select("mdas.*, users.email, users.is_active").
+    Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
+    Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+    Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+    Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state").
     First(&stc, id)
-if result.Error != nil {
+    if result.Error != nil {
     c.JSON(http.StatusNotFound, gin.H{
         "error": "STC not found",
     })
     return
-}
+    }
   
 
-    c.JSON(http.StatusOK, stc)
+    c.JSON(http.StatusOK, gin.H{"stc":stc})
 }
 
 
@@ -403,31 +413,24 @@ func FilterStcByState(c *gin.Context){
 }
 
 
-func StcTotal(c *gin.Context) {
-    fmt.Println("Get Total number of Stc, active Stc, inactive Stc")
+
+func StcTotal(c *gin.Context){
+    fmt.Println("Get Total number of stc, active stc, inactive stc")
+  
     var totalCount, activeCount, inactiveCount int64
+    if result := config.DB.Model(&Stc{}).Count(&totalCount); result.Error != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
+        return
+    }
 
-    // Total number of Stcs
-    if result := config.DB.Model(&Stc{}).Count(&totalCount); result.Error != nil {
+    if result := config.DB.Model(&Stc{}).Where("is_operational  = ?", true).Count(&activeCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
 
-    // Total number of active Stcs
-    if result := config.DB.Model(&Stc{}).
-        Joins("JOIN users ON stcs.user_id = users.id").
-        Where("users.is_active = ?", true).
-        Count(&activeCount); result.Error != nil {
+    if result := config.DB.Model(&Stc{}).Where("is_operational = ?", false).Count(&inactiveCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
-
-    // Total number of inactive Stc
-    inactiveCount = totalCount - activeCount
-
-    c.JSON(http.StatusOK, gin.H{
-        "total_stc":            totalCount,
-        "total_active_stc":     activeCount,
-        "total_inactive_stc":   inactiveCount,
-    })
+    c.JSON(http.StatusOK, gin.H{"total_count":totalCount, "total_is_active":activeCount, "total_in_active":inactiveCount})
 }

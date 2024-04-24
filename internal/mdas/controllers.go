@@ -45,7 +45,7 @@ func CreateMda(c *gin.Context) {
    }
 
     mda := Mda{
-        RegisterName:MdaCreateSchema.RegisterName,
+        RegisterName: MdaCreateSchema.RegisterName,
         Address:MdaCreateSchema.Address,
         StateOfOperation:stateOfOperation,
         UserID: newUserID,
@@ -85,7 +85,7 @@ func GetAllMdas(c *gin.Context) {
     var mdas []struct {
         Id          uint
         StateOfOperation    string
-        Name        string
+        Name         string
         Address      string
         IsActive     bool   `json:"is_active"`
         STCCount     int    `json:"stc_count"`

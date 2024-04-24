@@ -2,6 +2,7 @@ package course
 
 import (
 	"fme_backend/internal/config"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -102,8 +103,22 @@ func GetCourse(c *gin.Context) {
 		 c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
 		 return
 	 }
+
+	 userRoleStr,exists := c.Get("userRole")
+
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
 	 var course GetCourseSchema
-	 switch (userID) {
+	 switch (userRole) {
 	 case 1:
 		err := config.DB.Table("courses").
         Select("COUNT(DISTINCT students.id) AS total_students, COUNT(DISTINCT mda_courses.mda_id) AS total_mda, COUNT(DISTINCT stc_courses.stc_id) AS total_stc, courses.description AS description, courses.name AS name, courses.id AS id").
@@ -123,6 +138,7 @@ func GetCourse(c *gin.Context) {
 		 c.JSON(http.StatusOK,gin.H{"course":course})
  
 	 default:
+		fmt.Println(userID)
 		 c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
 		 return
 	 }
@@ -156,8 +172,22 @@ func GetAllCourses(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
 		return
 	}
+
+	userRoleStr,exists := c.Get("userRole")
+
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
 	var courses []GetAllCoursesSchema
-	switch (userID) {
+	switch (userRole) {
 	case 1:
 	   err := config.DB.Table("courses").
 	   Select("id,name,description").
@@ -171,6 +201,7 @@ func GetAllCourses(c *gin.Context) {
 		c.JSON(http.StatusOK,gin.H{"course":courses})
 
 	default:
+		fmt.Println(userID)
 		c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
 		return
 	}
@@ -200,5 +231,44 @@ func GetAllCategories(c *gin.Context) {
 }
 
 func GetCategory(c *gin.Context) {
+
+}
+
+func GetDashSummary(c *gin.Context) {
+	userRoleStr,exists := c.Get("userRole")
+
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+	switch userRole {
+	case 1:
+		var totals struct {
+			TotalStcs    int64
+			TotalMdas    int64
+			TotalStudents int64
+		}
+		
+		
+		err := config.DB.Table("stcs").Count(&totals.TotalStcs).
+			Table("mdas").Count(&totals.TotalMdas).
+			Table("students").Count(&totals.TotalStudents).Error
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest,gin.H{"message":"unable to get information"})
+			return
+		}
+		c.JSON(http.StatusOK,gin.H{"response":totals})
+
+	default:
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user role"})
+	}
 
 }

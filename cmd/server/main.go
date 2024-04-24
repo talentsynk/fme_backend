@@ -77,13 +77,13 @@ func main() {
 
 
   	studentgroup:= r.Group("/student")
-	studentgroup.POST("/create-fme",student.CreateFmeStudent)
+	studentgroup.POST("/create-fme",middleware.RequireFme,student.CreateFmeStudent)
 	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
 
 
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
-	studentgroup.GET("/all",middleware.RequireFme,student.GetAllStudents)
-	studentgroup.GET("/:id",middleware.RequireFme,student.GetStudent)
+	studentgroup.GET("/all",middleware.RequireAuth,student.GetAllStudents)
+	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create",middleware.RequireFme,course.CreateCategory)
@@ -94,6 +94,9 @@ func main() {
 	coursegroup.POST("/create",middleware.RequireFme,course.CreateCourse)
 	coursegroup.GET("/:id", middleware.RequireAuth, course.GetCourse)
 	coursegroup.GET("/all",middleware.RequireAuth,course.GetAllCourses)
+
+	dashgroup := r.Group("/dashboard")
+	dashgroup.GET("/summary",middleware.RequireAuth,course.GetDashSummary)
 
 	
 
