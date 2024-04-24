@@ -165,7 +165,7 @@ func GetStc(c *gin.Context){
     }
 
     if result := config.DB.Table("stcs").
-    Select("stcs.id AS id, stcs.name AS name, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
+    Select("stcs.id AS id, stcs.name AS name, stcs.address AS address,stcs.state AS state, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
     Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
