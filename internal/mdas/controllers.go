@@ -48,7 +48,6 @@ func CreateMda(c *gin.Context) {
         RegisterName:MdaCreateSchema.RegisterName,
         Address:MdaCreateSchema.Address,
         StateOfOperation:stateOfOperation,
-        // PhoneNumber: MdaCreateSchema.PhoneNumber,
         UserID: newUserID,
     }
 
@@ -217,17 +216,24 @@ func SearchMda(c *gin.Context) {
 
     // Update the SQL query to include the email and isActive fields from the users table
     if err := config.DB.Table("mdas").
-        // Select("mdas.*, users.email, users.is_active").
-	 Select("mdas.*, MAX(users.email) AS email, MAX(users.is_active) AS is_active, COUNT(stcs.id) AS stc_count, COUNT(students.id) AS student_count").
-        Joins("JOIN users ON mdas.user_id = users.id").
-        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
-        Joins("LEFT JOIN students ON mdas.id = students.mda_id").
-        Where("register_name LIKE ? OR address LIKE ? OR state_of_operation LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%").
-        Find(&mdasearch).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for MDAs", "details": err.Error()})
-        return
-    }
-
+    Select(`
+        mdas.id,
+        mdas.register_name,
+        mdas.address,
+        mdas.state_of_operation,
+        MAX(CASE WHEN users.is_active THEN 1 ELSE 0 END) AS is_active,
+        MAX(users.email) AS email,
+        COUNT(stcs.id) AS stc_count,
+        COUNT(students.id) AS student_count`).
+    Joins("JOIN users ON mdas.user_id = users.id").
+    Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+    Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+    Where("mdas.register_name LIKE ? OR mdas.address LIKE ? OR mdas.state_of_operation LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%").
+    Group("mdas.id, mdas.register_name, mdas.address, mdas.state_of_operation").
+    Find(&mdasearch).Error; err != nil {
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for MDAs", "details": err.Error()})
+    return
+}
     if len(mdasearch) == 0 {
         c.JSON(http.StatusOK, gin.H{"message": "No matching mdas found"})
         return
