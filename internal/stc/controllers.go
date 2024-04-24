@@ -432,31 +432,24 @@ func FilterStcByState(c *gin.Context){
 }
 
 
-func StcTotal(c *gin.Context) {
-    fmt.Println("Get Total number of Stc, active Stc, inactive Stc")
+
+func StcTotal(c *gin.Context){
+    fmt.Println("Get Total number of stc, active stc, inactive stc")
+  
     var totalCount, activeCount, inactiveCount int64
+    if result := config.DB.Model(&Stc{}).Count(&totalCount); result.Error != nil{
+        c.JSON(http.StatusInternalServerError, gin.H{"error":result.Error.Error()})
+        return
+    }
 
-    // Total number of Stcs
-    if result := config.DB.Model(&Stc{}).Count(&totalCount); result.Error != nil {
+    if result := config.DB.Model(&Stc{}).Where("is_operational  = ?", true).Count(&activeCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
 
-    // Total number of active Stcs
-    if result := config.DB.Model(&Stc{}).
-        Joins("JOIN users ON stcs.user_id = users.id").
-        Where("users.is_active = ?", true).
-        Count(&activeCount); result.Error != nil {
+    if result := config.DB.Model(&Stc{}).Where("is_operational = ?", false).Count(&inactiveCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
     }
-
-    // Total number of inactive Stc
-    inactiveCount = totalCount - activeCount
-
-    c.JSON(http.StatusOK, gin.H{
-        "total_stc":            totalCount,
-        "total_active_stc":     activeCount,
-        "total_inactive_stc":   inactiveCount,
-    })
+    c.JSON(http.StatusOK, gin.H{"total_count":totalCount, "total_is_active":activeCount, "total_in_active":inactiveCount})
 }
