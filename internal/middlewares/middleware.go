@@ -108,7 +108,8 @@ func RequireAuth(c *gin.Context) {
             return
         }
 
-        c.Set("userID", user.ID) // Ensure this key matches what you use in CreateMda
+        c.Set("userID", user.ID)
+        c.Set("userRole", user.Role) // Ensure this key matches what you use in CreateMda
         c.Next()
     } else {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})
