@@ -219,26 +219,7 @@ func GetStcByID(c *gin.Context){
 }
 
 
-// func SearchStc(c *gin.Context) {
-//     query := c.Query("query")
-//     if query == "" {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Search query is required"})
-//         return
-//     }
-
-//     var stcsearch []Stc
-//     if err := config.DB.Where("ownership LIKE ? OR centre_code LIKE ? OR name LIKE ? OR local_government LIKE ? OR state LIKE ? OR  certificate_of_operational_url LIKE ?", "%"+query+"%", "%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%","%"+query+"%").Find(&stcsearch).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-//         return
-//     }
-
-//     if len(stcsearch) == 0 {
-//         c.JSON(http.StatusOK, gin.H{"message": "No matching stc found"})
-//         return
-//     }
-
-//     c.JSON(http.StatusOK, stcsearch)
-// }
+ 
 
 
 func SearchStc(c *gin.Context) {
@@ -253,7 +234,7 @@ func SearchStc(c *gin.Context) {
         Email    string `json:"email"`
         IsActive bool   `json:"is_active"`
     }
-    if err := config.DB.Table("mdas").
+    if err := config.DB.Table("stcs").
         Select("stcs.*, users.email, users.is_active").
         Joins("JOIN users ON stcs.user_id = users.id").
         Where("name LIKE ? OR address LIKE ? OR state LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%").
