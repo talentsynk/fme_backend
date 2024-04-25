@@ -36,14 +36,6 @@ func CreateFmeUser(c *gin.Context) {
 	}
 	
 
-	// Check that the phone number is of the right syntax
-	if !utilities.IsNigerianPhoneNumber(UserCreateSchema.PhoneNumber){
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to read request body",
-		})
-		return
-	}
-
 	// Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
 	if err != nil {

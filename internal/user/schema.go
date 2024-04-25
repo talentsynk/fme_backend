@@ -1,7 +1,7 @@
 package myuser
 
 var UserCreateSchema struct {
-	PhoneNumber   string
+
 	Email         string
 	Password      string
 }

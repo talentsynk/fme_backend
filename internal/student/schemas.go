@@ -20,17 +20,18 @@ var CreateStudentSchema struct {
 }
 
 type GetAllStudentSchema struct {
-    StudentID    uint
+    ID    uint
     FirstName    string
     LastName     string
     IsActive     bool
     Email        string
 	CoursesTaken 	 string
 	StateOfResidence	string
+	UserID			int
 }
 
 type GetStudentSchema struct {
-    StudentID    uint
+    ID    uint
     FirstName    string
     LastName     string
     IsActive     bool
@@ -41,4 +42,5 @@ type GetStudentSchema struct {
 	Address			string
 	CreatedAt		time.Time
 	PhoneNumber		string
+	UserId 			int
 }

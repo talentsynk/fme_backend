@@ -336,6 +336,7 @@ func CreateStcStudent(c *gin.Context) {
 }
 
 func GetAllStudents(c *gin.Context) {
+    // get page value
     pageStr := c.Query("page")
     // mdaIDStr := c.Query("mda_id")
     // stcIDStr := c.Query("stc_id")
@@ -348,8 +349,12 @@ func GetAllStudents(c *gin.Context) {
     }
 
     offset := (page - 1) * limit
-    userIDstr,exists := c.Get("userID")
 
+    //get active filter
+    activestr:= c.Query("active")
+
+    // Get userID
+    userIDstr,exists := c.Get("userID")
     if !exists{
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
         return
@@ -360,8 +365,9 @@ func GetAllStudents(c *gin.Context) {
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
         return
     }
-    userRoleStr,exists := c.Get("userRole")
 
+    // Get User Role
+    userRoleStr,exists := c.Get("userRole")
     if !exists{
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user role"})
         return
@@ -373,18 +379,36 @@ func GetAllStudents(c *gin.Context) {
         return
     }
 
+    // Make DB queries
     var students []GetAllStudentSchema
     switch (userRole) {
     case 1:
-        err := config.DB.Table("students").
-        Select("students.id AS student_id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
+        query := config.DB.Table("students").
+        Select("students.id AS id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
-        Group("students.id, users.is_active, users.email").
+        Group("students.id, users.is_active, users.id, users.email").
         Offset(offset).
-        Limit(limit).
-        Scan(&students).Error
+        Limit(limit)
+
+        // Add active filter:
+        if (activestr != "") {
+            var isActiveCondition string
+            if (activestr == "true") {
+                isActiveCondition = "users.is_active = true"
+            } else if (activestr == "false"){
+                isActiveCondition = "users.is_active = false"
+            } else {
+                c.JSON(http.StatusBadRequest, gin.H{"message":"incorrect active filter"})
+                return
+            }
+            query = query.Where(isActiveCondition)
+
+        }
+
+
+        err := query.Scan(&students).Error
 
         if err!=nil {
             c.JSON(http.StatusBadRequest,gin.H{
@@ -403,7 +427,7 @@ func GetAllStudents(c *gin.Context) {
 }
 
 func GetStudent(c *gin.Context) {
-    // GET ID
+    // GET ID from parameter
 	idStr := c.Param("id")
 	if idStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -420,6 +444,7 @@ func GetStudent(c *gin.Context) {
 		return
 	}
 
+    // Get user ID
     userIDstr,exists := c.Get("userID")
     if !exists{
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
@@ -431,8 +456,9 @@ func GetStudent(c *gin.Context) {
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
         return
     }
-    userRoleStr,exists := c.Get("userRole")
 
+    // Get user Role
+    userRoleStr,exists := c.Get("userRole")
     if !exists{
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
         return
@@ -449,18 +475,24 @@ func GetStudent(c *gin.Context) {
     switch (userRole) {
     case 1:
         err := config.DB.Table("students").
-        Select("students.id AS student_id, students.firstname AS first_name, students.lastname AS last_name, students.phone_number AS phone_number, users.is_active AS is_active,  users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, MAX(students.created_at) AS created_at").
+        Select("students.id AS id, students.firstname AS first_name, students.lastname AS last_name, students.phone_number AS phone_number, users.is_active AS is_active,  users.email AS email, users.id AS user_id, STRING_AGG(courses.name, ', ') AS courses_taken, students.gender AS gender, students.state_of_residence AS state_of_residence, students.address AS address, MAX(students.created_at) AS created_at").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
         Where("students.id = ?", id).
-        Group("students.id, users.is_active, users.email, students.firstname, students.lastname, students.phone_number, students.gender, students.state_of_residence, students.address").
-        Scan(&student).Error
+        Group("students.id, users.is_active, users.email, users.id, students.firstname, students.lastname, students.phone_number, students.gender, students.state_of_residence, students.address").
+        Find(&student,id).Error
 
 
         if err!=nil {
             c.JSON(http.StatusBadRequest,gin.H{
                 "message":"error retrieving students",
+            })
+            return
+        }
+        if (student.ID == 0) {
+            c.JSON(http.StatusNotFound,gin.H{
+                "message":"record does not exist",
             })
             return
         }
