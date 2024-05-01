@@ -103,25 +103,27 @@ func SuspendUser(c *gin.Context) {
 			return
 		}
 
+		switch user.Role {
+		case 1:
+			if instance.Role == 2 || instance.Role ==3 {
+				instance.IsActive = false
+				result:= config.DB.Save(&instance)
+				if result.Error !=nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"message": "Unable to update the user record",
+					})
+					return
+				}
+				c.JSON(200, gin.H{"message": "User suspended successfully"})
+				return
 
-		if !CanSuspendActivate(&user,&instance) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Only fmes can suspend",
-			})
-			return
-		}
-
-		// suspend the user
-		instance.IsActive = false
-		result:= config.DB.Save(&instance)
-		if result.Error !=nil {
+			}
+		default:
 			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Unable to update the user record",
 			})
 			return
 		}
-
-		c.JSON(200, gin.H{"message": "User suspended successfully"})
 	}
 
 // Activate User
@@ -163,24 +165,29 @@ func ActivateUser(c *gin.Context) {
 		return
 	}
 
-	if !CanSuspendActivate(&user,&instance) {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Only fmes can suspend",
-		})
-		return
-	}
+	switch user.Role {
+	case 1:
+		if instance.Role == 2 || instance.Role ==3 {
+			instance.IsActive = false
+			result:= config.DB.Save(&instance)
+			if result.Error !=nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "Unable to update the user record",
+				})
+				return
+			}
+			c.JSON(200, gin.H{"message": "User activated successfully"})
+			return
 
-	// activate the user
-	instance.IsActive = true
-	result:= config.DB.Save(&instance)
-	if result.Error !=nil {
+		}
+	default:
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Unable to update the user record",
 		})
 		return
+
 	}
 
-	c.JSON(200, gin.H{"message": "User activated successfully"})
 	}
 	
 // Login 
