@@ -26,3 +26,9 @@ type GetAllCoursesSchema struct {
 	Name string
 	Description string
 }
+
+type GetAllCategoriesSchema struct {
+	Id uint
+	Name string
+	Description string
+}

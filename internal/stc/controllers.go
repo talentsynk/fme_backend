@@ -3,12 +3,14 @@ package stc
 import (
 	"errors"
 	"fme_backend/internal/config"
-    myuser "fme_backend/internal/user"
-    "fme_backend/internal/utilities"
+	myuser "fme_backend/internal/user"
+	"fme_backend/internal/utilities"
 	"fmt"
 	"net/http"
 	"sort"
-    "strconv"
+	"strconv"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -156,20 +158,25 @@ func GetStc(c *gin.Context){
     var stcs []struct {
         Id          uint
         StateOfOperation string
+        CreatedAt time.Time
         Name        string
         Address      string
         IsActive     bool   `json:"is_active"`
-        StudentCount int    `json:"student_count"`
+        StudentCount uint    `json:"student_count"`
         CourseCount     uint
         UserId          uint
+        Email       string
+        CertifiedStudentCount  uint
+        NonCertifedStudentCount uint
     }
 
     if result := config.DB.Table("stcs").
-    Select("stcs.id AS id, stcs.name AS name, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
+    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
     Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
-    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id,users,email, stcs.state"). // Include all non-aggregated columns in GROUP BY
     Limit(limit).
     Offset(offset).
     Find(&stcs); result.Error != nil {
@@ -193,7 +200,7 @@ func GetStcByID(c *gin.Context){
         Name        string
         Address      string
         IsActive     bool   `json:"is_active"`
-        StudentCount int    `json:"student_count"`
+        StudentCount uint    `json:"student_count"`
         CertifiedStudentCount   uint
         NonCertifedStudentCount     uint
         CourseCount     uint

@@ -208,11 +208,13 @@ func GetAllCourses(c *gin.Context) {
 }
 
 func GetAllCategories(c *gin.Context) {
-	var categories []Category
+	var categories []GetAllCategoriesSchema
 	var count int64
 
 	// Find all courses from the database
-	result := config.DB.Select("id", "name", "description").Find(&categories)
+	result := config.DB.Table("categories").
+	Select("categories.id AS id, categories.name AS name, categories.description AS description").
+	Find(&categories)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "no course found"})
 		return

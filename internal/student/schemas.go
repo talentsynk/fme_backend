@@ -28,6 +28,12 @@ type GetAllStudentSchema struct {
 	CoursesTaken 	 string
 	StateOfResidence	string
 	UserID			int
+	PhoneNumber string
+	CreatedAt		time.Time
+	Gender string
+	Address	string
+
+
 }
 
 type GetStudentSchema struct {

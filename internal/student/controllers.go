@@ -24,13 +24,18 @@ func CreateFmeStudent(c *gin.Context) {
     }
 
     // Data Validation
-    stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
+    var stateOfOrigin string
+    var result bool
+    if (CreateStudentSchema.StateOfOrigin != "") {
+    stateOfOrigin, result = utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
             "message": "Incorrect state of origin",
         })
         return
     }
+    }
+    
 
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
     if !result {
@@ -384,11 +389,11 @@ func GetAllStudents(c *gin.Context) {
     switch (userRole) {
     case 1:
         query := config.DB.Table("students").
-        Select("students.id AS id, students.firstname AS first_name, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
+        Select("students.id AS id, students.gender AS gender, students.address AS address, MAX(students.created_at) AS created_at, students.firstname AS first_name, students.phone_number AS phone_number, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
         Joins("JOIN users ON students.user_id = users.id").
         Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
         Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
-        Group("students.id, users.is_active, users.id, users.email").
+        Group("students.id, students.phone_number, students.firstname, students.lastname, students.state_of_residence, students.gender, students.address, users.is_active, users.id, users.email").
         Offset(offset).
         Limit(limit)
 
