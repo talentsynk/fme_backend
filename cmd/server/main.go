@@ -2,13 +2,13 @@ package main
 
 import (
 	"fme_backend/internal/config"
-	 "fme_backend/internal/course"
-	"fme_backend/internal/student"
+	"fme_backend/internal/course"
+	"fme_backend/internal/dashboard"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
-	myuser "fme_backend/internal/user"
 	stc "fme_backend/internal/stc"
-
+	"fme_backend/internal/student"
+	myuser "fme_backend/internal/user"
 
 	"time"
 
@@ -84,6 +84,7 @@ func main() {
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
 	studentgroup.GET("/all",middleware.RequireAuth,student.GetAllStudents)
 	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
+	studentgroup.GET("/total-info",middleware.RequireAuth,student.GetTotalStudentInfo)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create",middleware.RequireFme,course.CreateCategory)
@@ -96,7 +97,8 @@ func main() {
 	coursegroup.GET("/all",middleware.RequireAuth,course.GetAllCourses)
 
 	dashgroup := r.Group("/dashboard")
-	dashgroup.GET("/summary",middleware.RequireAuth,course.GetDashSummary)
+	dashgroup.GET("/summary",middleware.RequireAuth,dashboard.GetDashSummary)
+	dashgroup.GET("/course-percentage", middleware.RequireAuth,dashboard.GetStudentPercentPerCourse)
 
 	
 

@@ -105,7 +105,7 @@ func SuspendUser(c *gin.Context) {
 
 		switch user.Role {
 		case 1:
-			if instance.Role == 2 || instance.Role ==3 {
+			if instance.Role == 2 || instance.Role ==3 || instance.Role ==4{
 				instance.IsActive = false
 				result:= config.DB.Save(&instance)
 				if result.Error !=nil {
@@ -167,7 +167,7 @@ func ActivateUser(c *gin.Context) {
 
 	switch user.Role {
 	case 1:
-		if instance.Role == 2 || instance.Role ==3 {
+		if instance.Role == 2 || instance.Role ==3 || instance.Role == 4{
 			instance.IsActive = false
 			result:= config.DB.Save(&instance)
 			if result.Error !=nil {

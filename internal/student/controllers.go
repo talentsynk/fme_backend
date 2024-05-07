@@ -510,5 +510,55 @@ func GetStudent(c *gin.Context) {
     }
 }
 
+func GetTotalStudentInfo(c *gin.Context) {
+    // Get user ID
+    userIDstr,exists := c.Get("userID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get user Role
+    userRoleStr,exists := c.Get("userRole")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var studentinfo TotalStudentInfo
+    switch userRole {
+    case 1:
+        err:= config.DB.Table("students").
+        Joins("JOIN users ON students.user_id = users.id").
+        Select("COUNT(DISTINCT students.id) as total_students, SUM(CASE WHEN users.is_active = true THEN 1 ELSE 0 END) as total_active_students, SUM(CASE WHEN users.is_active = false THEN 1 ELSE 0 END) as total_inactive_students").
+        Scan(&studentinfo).Error
+
+        if err!=nil {
+            c.JSON(http.StatusBadRequest,gin.H{
+                "message":"error retrieving students",
+            })
+            return
+        }
+
+        c.JSON(http.StatusOK,gin.H{"studentInfo":studentinfo})
+    
+    default:
+        fmt.Println(userID)
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
+        return
+    }
+}
 
 
