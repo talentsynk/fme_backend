@@ -72,7 +72,8 @@ func main() {
 	 stcgroup.POST("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
 	 stcgroup.POST("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
-	
+	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
+	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
 	 
 
 
