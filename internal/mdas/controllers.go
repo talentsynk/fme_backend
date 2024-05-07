@@ -92,19 +92,17 @@ func GetAllMdas(c *gin.Context) {
         StudentCount int    `json:"student_count"`
         UserId  uint
         CreatedAt   time.Time
-        CourseCount     uint
-        Email     string `json:"email"`
-
-
-
+        // CourseCount     uint
+        // Email     string `json:"email"`
     }
 
     if result := config.DB.Table("mdas").
-    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+    // Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+    // Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active,users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count").
     Joins("JOIN users ON mdas.user_id = users.id").
     Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
     Joins("LEFT JOIN students ON mdas.id = students.mda_id").
-    Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
     Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
     Limit(limit).
     Offset(offset).
@@ -139,7 +137,7 @@ func GetMdaByID(c *gin.Context) {
         CreatedAt   time.Time
         CourseCount     uint
         Address         string
-        Email     string `json:"email"`
+        // Email     string `json:"email"`
         IsActive  bool   `json:"is_active"`
         STCCount  int    `json:"stc_count"`
         StudentCount int  `json:"student_count"`
@@ -147,12 +145,13 @@ func GetMdaByID(c *gin.Context) {
     }
 
     result := config.DB.Table("mdas").
-        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id").
         Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
-        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id,users.email").
+        // Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id,users.email").
+         Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id").
         First(&mda, id)
 
     if result.Error != nil {
@@ -214,24 +213,21 @@ func SearchMda(c *gin.Context) {
     }
 
     var mdasearch []struct {
-        Mda
-        Email    string `json:"email"`
-        IsActive bool   `json:"is_active"`
-        STCCount  int    `json:"stc_count"`
-        StudentCount int  `json:"student_count"`
+        Id          uint
+        StateOfOperation    string
+        Name         string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        STCCount     int    `json:"stc_count"`
+        StudentCount int    `json:"student_count"`
+        UserId  uint
+        CreatedAt   time.Time
     }
 
     // Update the SQL query to include the email and isActive fields from the users table
     if err := config.DB.Table("mdas").
-    Select(`
-        mdas.id,
-        mdas.register_name,
-        mdas.address,
-        mdas.state_of_operation,
-        MAX(CASE WHEN users.is_active THEN 1 ELSE 0 END) AS is_active,
-        MAX(users.email) AS email,
-        COUNT(stcs.id) AS stc_count,
-        COUNT(students.id) AS student_count`).
+    // Select(`mdas.id, mdas.register_name, mdas.address, mdas.state_of_operation,MAX(CASE WHEN users.is_active THEN 1 ELSE 0 END) AS is_active, MAX(users.email) AS email,COUNT(stcs.id) AS stc_count,COUNT(students.id) AS student_count`).
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active,users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count").
     Joins("JOIN users ON mdas.user_id = users.id").
     Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
     Joins("LEFT JOIN students ON mdas.id = students.mda_id").
