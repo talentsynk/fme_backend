@@ -165,19 +165,18 @@ func GetStc(c *gin.Context){
         StudentCount uint    `json:"student_count"`
         CourseCount     uint
         UserId          uint 
-        // Email       string
-        // CertifiedStudentCount  uint
-        // NonCertifedStudentCount uint
+        Email       string
+        CertifiedStudentCount  uint
+        NonCertifedStudentCount uint
     }
 
     if result := config.DB.Table("stcs").
-    // Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
-    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id,COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
+    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address, stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
     Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
     Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
-    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id,users, stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id,users,email,stcs.state"). // Include all non-aggregated columns in GROUP BY
     Limit(limit).
     Offset(offset).
     Find(&stcs); result.Error != nil {
@@ -231,22 +230,20 @@ func GetAllMdaStc(c *gin.Context){
         StudentCount uint    `json:"student_count"`
         CourseCount     uint
         UserId          uint
-        // Email       string
-        // CertifiedStudentCount  uint
-        // NonCertifedStudentCount uint
+        Email       string
+        CertifiedStudentCount  uint
+        NonCertifedStudentCount uint
     }
 
     if result := config.DB.Table("stcs").
-    // Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
-    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count").
+    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
     Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
     Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
     Joins("JOIN mdas ON stcs.mda_id = mdas.id").  
     Where("stcs.mda_id = ?", mdaID). 
-    Group("stcs.id, stcs.name, stcs.address, users.is_active,users.id,users, stcs.state"). // Include all non-aggregated columns in GROUP BY
-    // Group("stcs.id, stcs.name, stcs.address, users.is_active,users.id,users,email, stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Group("stcs.id, stcs.name, stcs.address, users.is_active,users.id,users,email, stcs.state"). // Include all non-aggregated columns in GROUP BY
     Limit(limit).
     Offset(offset).
     Find(&stcs); result.Error != nil {
@@ -318,8 +315,8 @@ func GetMdaStcByID(c *gin.Context){
     }
 
     var stc struct {
-        Id          uint
-        Name        string
+        Id           uint
+        Name         string
         Address      string
         IsActive     bool   `json:"is_active"`
         StudentCount uint    `json:"student_count"`
@@ -360,15 +357,15 @@ func SearchStc(c *gin.Context) {
     }
 
     var stcsearch []struct {
-        Id          uint
+        Id               uint
         StateOfOperation string
-        CreatedAt time.Time
-        Name        string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CourseCount     uint
-        UserId          uint
+        CreatedAt        time.Time
+        Name             string
+        Address          string
+        IsActive         bool   `json:"is_active"`
+        StudentCount     uint    `json:"student_count"`
+        CourseCount      uint
+        UserId           uint
     }
     if err := config.DB.Table("stcs").
         // Select("stcs.*, users.email, users.is_active").
@@ -586,3 +583,82 @@ func StcTotal(c *gin.Context) {
 }
 
 
+
+
+// 
+
+
+func GetTest(c *gin.Context) {
+    // Get user Role
+    userRoleStr, exists := c.Get("userRole")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user"})
+        return
+    }
+
+    userRole, ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint"})
+        return
+    }
+    id := c.Param("id")
+    if id == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error":"Stc ID is required"})
+        return
+    }
+
+    var stc struct {
+        Id          uint
+        Name        string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        StudentCount uint    `json:"student_count"`
+        CertifiedStudentCount   uint
+        NonCertifedStudentCount     uint
+        CourseCount     uint
+        UserId          uint
+    }
+    switch (userRole) {
+    case 1:
+        // Query to retrieve STC information for role 1
+        // Adjust the query as needed
+        result := config.DB.Table("stcs").
+            Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
+            Joins("JOIN users ON stcs.user_id = users.id").
+            Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+            Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Where("users.role = ?", 1).
+            Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state").
+            First(&stc, id)
+
+        if result.Error != nil {
+            c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
+            return
+        }
+
+    case 2:
+        // Query to retrieve STC information for role 2
+        // Adjust the query as needed
+        result := config.DB.Table("stcs").
+            Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
+            Joins("JOIN users ON stcs.user_id = users.id").
+            Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+            Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Where("users.role = ?", 2). // Assuming role 1 corresponds to MDA
+            Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state").
+            First(&stc, id)
+
+        if result.Error != nil {
+            c.JSON(http.StatusNotFound, gin.H{"error": "STC not found"})
+            return
+        }
+
+    default:
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "default unauthorized user"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"stc": stc})
+}
