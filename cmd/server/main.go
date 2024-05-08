@@ -49,13 +49,13 @@ func main() {
 	mdagroup.PATCH("/update-mda/:id",middleware.RequireAuth, mda.UpdateMda)
 	mdagroup.GET("/get-mda/:id",middleware.RequireAuth, mda.GetMdaByID)
 	mdagroup.GET("/total-mda", middleware.RequireAuth, mda.MdaTotal)
-
     mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
     mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
 	mdagroup.GET("/filter-by-state",middleware.RequireAuth, mda.FilterMdaByState )
     mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
 	mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
-
+	mdagroup.GET("/get-auth-mda-by-id/:id",middleware.RequireAuth, mda.GetAuthMdaByID)
+   
 
 
     
@@ -74,6 +74,7 @@ func main() {
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
+	 stcgroup.GET("/get-test/:id",middleware.RequireAuth, stc.GetTest)
 	 
 
 
