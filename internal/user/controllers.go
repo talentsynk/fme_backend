@@ -105,7 +105,7 @@ func SuspendUser(c *gin.Context) {
 
 		switch user.Role {
 		case 1:
-			if instance.Role == 2 || instance.Role ==3 {
+			if (instance.Role == 2 || instance.Role ==3 || instance.Role ==4){
 				instance.IsActive = false
 				result:= config.DB.Save(&instance)
 				if result.Error !=nil {
@@ -116,6 +116,104 @@ func SuspendUser(c *gin.Context) {
 				}
 				c.JSON(200, gin.H{"message": "User suspended successfully"})
 				return
+			} else {
+				c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid role for suspending user"})
+				return
+			}
+			
+			
+		case 2:
+			// Get user MDA ID
+			var userMdaId int 
+			err := config.DB.Table("mdas").
+			Where("user_id = ?", user.ID).
+			Pluck("id",&userMdaId).Error
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "MdaAccount has issues",
+				})
+				return
+			}
+			//if the instance is an stc
+			if instance.Role == 3 {
+				//get the related mda id
+				var insanceMdaId int 
+				err := config.DB.Table("stcs").Pluck("mda_id",&insanceMdaId).Error
+				if err != nil {
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "MdaAccount has issues",
+					})
+					return
+				}
+				// compare if the instance is an stc under the user
+				if (insanceMdaId == userMdaId) {
+					instance.IsActive = false
+					result:= config.DB.Save(&instance)
+					if result.Error !=nil {
+						c.JSON(http.StatusBadRequest, gin.H{
+							"message": "Cannot suspend this user",
+						})
+						return
+					}
+					c.JSON(200, gin.H{"message": "User suspended successfully"})
+					return
+				}
+			} else if (instance.Role ==4){	// if the instance is a student
+				// get the related data to determine if the student is an mda student or stc student
+				var instanceData struct{
+					mdaId int
+					stcId int
+				}
+				err := config.DB.Table("students").Select("mda_id, stc_id").Where("user_id = ?", instance.ID).Scan(&instanceData).Error
+				if err != nil {
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "cannot get the instance data",
+					})
+					return
+				}
+				if instanceData.mdaId != 0 {	// if this is the student is under an mda directly - Mda student
+					if userMdaId == instanceData.mdaId { // check if this student is under the authenticated mda
+						instance.IsActive = false	// deactivate the user
+						result:= config.DB.Save(&instance)
+						if result.Error !=nil {
+							c.JSON(http.StatusBadRequest, gin.H{
+								"message": "Unable to update the user record",
+							})
+							return
+						}
+						c.JSON(200, gin.H{"message": "User suspended successfully"})
+						return
+							}
+				} else if instanceData.stcId != 0 {	// if the student is an stc student
+					var insatnceStcMdaId int	// get the related mda id 
+					err := config.DB.Table("stcs").
+					Where("user_id = ?", instance.ID).
+					Pluck("mda_id",&insatnceStcMdaId).Error
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{
+							"message": "Unable to update the user record",
+						})
+						return
+					}
+
+					if insatnceStcMdaId == userMdaId {	// check if the student is under the authenticated mda
+						instance.IsActive = false	//deactivate the student
+						result:= config.DB.Save(&instance)
+						if result.Error !=nil {
+							c.JSON(http.StatusBadRequest, gin.H{
+								"message": "Unable to update the user record",
+							})
+							return
+						}
+						c.JSON(200, gin.H{"message": "User suspended successfully"})
+						return
+					}
+				} else {
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "Cannot suspend this user",
+					})
+					return
+				}
 
 			}
 		default:
@@ -167,7 +265,7 @@ func ActivateUser(c *gin.Context) {
 
 	switch user.Role {
 	case 1:
-		if instance.Role == 2 || instance.Role ==3 {
+		if instance.Role == 2 || instance.Role ==3 || instance.Role == 4{
 			instance.IsActive = false
 			result:= config.DB.Save(&instance)
 			if result.Error !=nil {

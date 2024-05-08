@@ -50,3 +50,9 @@ type GetStudentSchema struct {
 	PhoneNumber		string
 	UserId 			int
 }
+
+type TotalStudentInfo struct {
+	TotalStudents int
+	TotalActiveStudents	int
+	TotalInactiveStudents	int
+}
