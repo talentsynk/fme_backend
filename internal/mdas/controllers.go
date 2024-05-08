@@ -478,8 +478,7 @@ func GetAuthMdaByID(c *gin.Context) {
         Email         string `json:"email"`
         IsActive      bool   `json:"is_active"`
         STCCount      int    `json:"stc_count"`
-        StudentCount  int    `json:"student_count"`
-        UserId        uint
+        StudentCount  int    `json:"student_count"
     }
 
     // Query to retrieve MDA information and ensure it's associated with the authenticated user
