@@ -65,6 +65,7 @@ func CreateMda(c *gin.Context) {
         "message": "Mda created successfully",
     })
 }
+
 func GetAllMdas(c *gin.Context) {
     fmt.Println("controller started")
     limitStr := c.Query("limit")
@@ -444,7 +445,7 @@ func MdaTotal(c *gin.Context) {
 
 // Get Single Mda Under the Mda auth
 func GetAuthMdaByID(c *gin.Context) {
-    userIDstr, exists := c.Get("userID")
+    userIDstr, exists := c.Get("user")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized user"})
         return
@@ -456,19 +457,19 @@ func GetAuthMdaByID(c *gin.Context) {
         return
     }
 
-    idStr := c.Param("id")
-    if idStr == "" {
+    id := c.Param("id")
+    if id == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "MDA ID is required"})
         return
     }
 
-    id, err := strconv.Atoi(idStr)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{
-            "message": "Invalid MDA ID provided",
-        })
-        return
-    }
+    // id, err := strconv.Atoi(idStr)
+    // if err != nil {
+    //     c.JSON(http.StatusBadRequest, gin.H{
+    //         "message": "Invalid MDA ID provided",
+    //     })
+    //     return
+    // }
     var mda struct {
         Id            uint
         Name          string
@@ -478,7 +479,8 @@ func GetAuthMdaByID(c *gin.Context) {
         Email         string `json:"email"`
         IsActive      bool   `json:"is_active"`
         STCCount      int    `json:"stc_count"`
-        StudentCount  int    `json:"student_count"
+        StudentCount  int    `json:"student_count"`
+        UserId        uint
     }
 
     // Query to retrieve MDA information and ensure it's associated with the authenticated user
@@ -497,4 +499,73 @@ func GetAuthMdaByID(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, mda)
+}
+
+
+
+
+
+func GetAllAuthMdas(c *gin.Context) {
+    authUser, exists := c.Get("user")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "error": "User not authenticated",
+        })
+        return
+    }
+    
+    // Type assertion to extract user ID
+    userID, ok := authUser.(uint)
+    if !ok {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Failed to get user ID",
+        })
+        return
+    }
+    fmt.Println("controller started")
+    limitStr := c.Query("limit")
+    pageStr := c.Query("page")
+
+    limit, err := strconv.Atoi(limitStr)
+    if err != nil || limit <= 0 {
+        limit = 100
+    }
+
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page <= 0 {
+        page = 1
+    }
+
+    offset := (page - 1) * limit
+
+    var mdas []struct {
+        Id          uint
+        StateOfOperation    string
+        Name         string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        STCCount     int    `json:"stc_count"`
+        StudentCount int    `json:"student_count"`
+        UserId       uint
+        CreatedAt    time.Time
+        CourseCount  uint
+        Email        string   `json:"email"`
+    }
+
+    if result := config.DB.Table("mdas").
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+    Joins("JOIN users ON mdas.user_id = users.id").
+    Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+    Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+    Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+    Where("mdas.user_id = ?", userID).
+    Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
+    Limit(limit).
+    Offset(offset).
+    Find(&mdas); result.Error != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
