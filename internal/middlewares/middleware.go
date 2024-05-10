@@ -157,7 +157,7 @@ func RequireMda(c *gin.Context) {
         }
 
         if user.Role != 2 {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user"})
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user 1"})
             c.Abort()
             return
         }
@@ -165,13 +165,14 @@ func RequireMda(c *gin.Context) {
         var mda mda.Mda
         config.DB.First(&mda, "user_id = ?", user.ID)
         if mda.ID == 0 {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user"})
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Mda user 2"})
             c.Abort()
             return
         }
 
         c.Set("userID", user.ID) 
         c.Set("mdaID", mda.ID)
+        c.Set("userRole", user.Role) // Ensure this key matches what you use in CreateMda
         c.Next()
     } else {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})
