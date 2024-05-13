@@ -102,6 +102,8 @@ func main() {
 	dashgroup := r.Group("/dashboard")
 	dashgroup.GET("/summary",middleware.RequireAuth,dashboard.GetDashSummary)
 	dashgroup.GET("/course-percentage", middleware.RequireAuth,dashboard.GetStudentPercentPerCourse)
+	dashgroup.GET("/top-5-mda",middleware.RequireAuth,dashboard.GetTopMda)
+	dashgroup.GET("/top-5-stc",middleware.RequireAuth,dashboard.GetTopStc)
 
 	
 
