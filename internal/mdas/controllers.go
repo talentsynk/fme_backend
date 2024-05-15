@@ -569,3 +569,51 @@ func GetAllAuthMdas(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
+
+
+
+func GetMdaProfile(c *gin.Context) {
+    mdaIDstr,exists := c.Get("mdaID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    mdaID,ok := mdaIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var mda struct {
+        Id            uint
+        Name          string
+        CreatedAt     time.Time
+        CourseCount   uint
+        Address       string
+        Email         string `json:"email"`
+        IsActive      bool   `json:"is_active"`
+        STCCount      int    `json:"stc_count"`
+        StudentCount  int  `json:"student_count"`
+        UserId        uint
+    }
+
+    result := config.DB.Table("mdas").
+        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+        Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+        Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id,users.email").
+        First(&mda, mdaID)
+
+    if result.Error != nil {
+        c.JSON(http.StatusNotFound, gin.H{
+            "error": "MDA not found",
+        })
+        return
+    }
+
+    c.JSON(http.StatusOK, mda)
+    
+}
