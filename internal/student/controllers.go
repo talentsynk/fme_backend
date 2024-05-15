@@ -876,8 +876,66 @@ func GetTotalStudentInfo(c *gin.Context) {
         }
 
         c.JSON(http.StatusOK,gin.H{"studentInfo":studentinfo})
-    
-    default:
+
+    case 2:
+        // Get user MDA ID
+			var userMdaId uint 
+			err := config.DB.Table("mdas").
+			Where("user_id = ?", userID).
+			Pluck("id",&userMdaId).Error
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "MdaAccount has issues",
+				})
+				return
+			}
+
+            err = config.DB.Table("students").
+                    Joins("JOIN users ON students.user_id = users.id").
+                    Joins("LEFT JOIN stcs on students.stc_id = stcs.id").
+                    Select("COUNT(DISTINCT students.id) as total_students, SUM(CASE WHEN users.is_active = true THEN 1 ELSE 0 END) as total_active_students, SUM(CASE WHEN users.is_active = false THEN 1 ELSE 0 END) as total_inactive_students").
+                    Where("students.mda_id = ? OR stcs.mda_id = ?", userMdaId, userMdaId).
+                    Scan(&studentinfo).Error
+            if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Error retrieving students",
+				})
+				return
+            }
+            c.JSON(http.StatusOK,gin.H{"studentInfo":studentinfo})
+
+        case 3:
+            //get user stcid
+			var userStcId uint
+			err := config.DB.
+					Table("stcs").
+					Select("id").
+					Where("user_id = ?", userID).
+					Scan(&userStcId).Error
+			if err != nil{
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Error trying to suspend this user",
+				})
+				return
+			}
+
+            err = config.DB.Table("students").
+                    Joins("JOIN users ON students.user_id = users.id").
+                    Joins("LEFT JOIN stcs on students.stc_id = stcs.id").
+                    Select("COUNT(DISTINCT students.id) as total_students, SUM(CASE WHEN users.is_active = true THEN 1 ELSE 0 END) as total_active_students, SUM(CASE WHEN users.is_active = false THEN 1 ELSE 0 END) as total_inactive_students").
+                    Where("students.stc_id = ?", userStcId).
+                    Scan(&studentinfo).Error
+            if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Error retrieving students",
+				})
+				return
+            }
+            c.JSON(http.StatusOK,gin.H{"studentInfo":studentinfo})
+
+
+
+        default:
         fmt.Println(userID)
         c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
         return
