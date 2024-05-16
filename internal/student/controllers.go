@@ -153,12 +153,16 @@ func CreateMdaStudent(c *gin.Context) {
     }
 
     // Data Validation
-    stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
+    var stateOfOrigin string
+    var result bool
+    if (CreateStudentSchema.StateOfOrigin != "") {
+    stateOfOrigin, result = utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
             "message": "Incorrect state of origin",
         })
         return
+    }
     }
 
     if !utilities.IsNigerianPhoneNumber(CreateStudentSchema.PhoneNumber){
@@ -192,6 +196,7 @@ func CreateMdaStudent(c *gin.Context) {
         })
         return
     }
+    
 
     // Transaction Handling
     tx := config.DB.Begin() // Begin a transaction
@@ -216,6 +221,9 @@ func CreateMdaStudent(c *gin.Context) {
         UserID: newUserID,
         MdaID: mdaID,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
+        SID: CreateStudentSchema.SID,
+        NsqLevel: CreateStudentSchema.NsqLevel,
+        Address: CreateStudentSchema.Address,
     }
     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
@@ -227,7 +235,22 @@ func CreateMdaStudent(c *gin.Context) {
         return
     }
 
-    tx.Commit() 
+    // Add Course
+    studentcourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID: CreateStudentSchema.CourseID,
+    }
+    studentCourseResult := tx.Create(&studentcourse) // Create student within transaction
+    if studentCourseResult.Error != nil {
+        tx.Rollback() // Rollback if student creation fails
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to create User",
+        })
+        return
+    }
+
+    tx.Commit() // Commit the transaction if both creations are successful
+    // Success response
     c.JSON(http.StatusOK, gin.H{
         "message": "Student created successfully",
     })
@@ -260,12 +283,16 @@ func CreateStcStudent(c *gin.Context) {
     }
 
     // Data Validation
-    stateOfOrigin, result := utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
+    var stateOfOrigin string
+    var result bool
+    if (CreateStudentSchema.StateOfOrigin != "") {
+    stateOfOrigin, result = utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
             "message": "Incorrect state of origin",
         })
         return
+    }
     }
 
     StateOfResidence, result := utilities.ValidateState(CreateStudentSchema.StateOfResidence)
@@ -321,14 +348,30 @@ func CreateStcStudent(c *gin.Context) {
         DOB: dOB,
         UserID: newUserID,
         StcID: stcID,
+        SID: CreateStudentSchema.SID,
+        NsqLevel: CreateStudentSchema.NsqLevel,
+        Address: CreateStudentSchema.Address,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
     }
-    fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
         c.JSON(http.StatusBadRequest, gin.H{
             "error": "Failed to create User",
+        })
+        return
+    }
+
+    // Add Course
+    studentcourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID: CreateStudentSchema.CourseID,
+    }
+    studentCourseResult := tx.Create(&studentcourse) // Create student within transaction
+    if studentCourseResult.Error != nil {
+        tx.Rollback() // Rollback if student creation fails
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to create User",
         })
         return
     }
