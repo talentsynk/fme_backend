@@ -2,10 +2,10 @@ package config
 
 import (	
 
-          "gorm.io/driver/postgres"
-	    // "gorm.io/driver/mysql"
+            "gorm.io/driver/postgres"
+	    //   "gorm.io/driver/mysql"
 	   "gorm.io/gorm"
-
+  
 	"log"
 )
 
