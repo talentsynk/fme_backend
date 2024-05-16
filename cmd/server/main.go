@@ -54,9 +54,8 @@ func main() {
 	mdagroup.GET("/filter-by-state",middleware.RequireAuth, mda.FilterMdaByState )
     mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
 	mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
-	mdagroup.GET("/get-auth-mda-by-id/:id",middleware.RequireFme, mda.GetAuthMdaByID)
-    mdagroup.GET("/get-all-auth-Mda", middleware.RequireFme, mda.GetAllAuthMdas)
-
+	mdagroup.GET("/get-auth-mda-by-id/:id",middleware.RequireAuth, mda.GetAuthMdaByID)
+    mdagroup.GET("/get-all-auth-Mda", middleware.RequireAuth, mda.GetAuthAllMdas)
 
     
      stcgroup := r.Group("/stc")
@@ -74,8 +73,8 @@ func main() {
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
-     stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
-    //  stcgroup.GET("/get-stc", middleware.RequireAuth, stc.GetAllStc)
+     stcgroup.GET("  ", middleware.RequireMda, stc.StcMdaTotal)
+     stcgroup.GET("/get-stc", middleware.RequireAuth, stc.GetAllStc)
 	 
 
 

@@ -9,49 +9,46 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-
-
 func CreateMda(c *gin.Context) {
-	fmt.Println("controller started")
-    if  c.BindJSON(&MdaCreateSchema) != nil{
+    fmt.Println("controller started")
+    if c.BindJSON(&MdaCreateSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
             "error": "Failed to read request body",
         })
         return
     }
 
-    stateOfOperation, result := utilities.ValidateState( MdaCreateSchema.StateOfOperation)
+    stateOfOperation, result := utilities.ValidateState(MdaCreateSchema.StateOfOperation)
     if !result {
         c.JSON(http.StatusBadRequest, gin.H{
             "error": "Incorrect state of origin",
         })
         return
     }
-   // Transaction Handling
-   tx := config.DB.Begin() 
-   result, message, newUserID := myuser.CreateMdaUser(tx,MdaCreateSchema.Email, "dfcv")
-   if !result {
-       tx.Rollback() // Rollback if user creation fails
-       c.JSON(http.StatusBadRequest, gin.H{
-           "error": message,
-       })
-       return
-   }
-
-    mda := Mda{
-        RegisterName: MdaCreateSchema.RegisterName,
-        Address:MdaCreateSchema.Address,
-        StateOfOperation:stateOfOperation,
-        UserID: newUserID,
+   
+    // Transaction Handling
+    tx := config.DB.Begin() 
+    result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.Email, "dfcv")
+    if !result {
+        tx.Rollback() // Rollback if user creation fails
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": message,
+        })
+        return
     }
 
-	fmt.Println(mda)
+    mda := Mda{
+        RegisterName:     MdaCreateSchema.RegisterName,
+        Address:          MdaCreateSchema.Address,
+        StateOfOperation: stateOfOperation,
+        UserID:           newUserID,
+    }
+
+    fmt.Println(mda)
     mdaresult := tx.Create(&mda) 
     if mdaresult.Error != nil {
         tx.Rollback() 
@@ -60,11 +57,62 @@ func CreateMda(c *gin.Context) {
         })
         return
     }
-    tx.Commit() 
+
+    tx.Commit() // Commit the transaction before returning the response
+
     c.JSON(http.StatusOK, gin.H{
         "message": "Mda created successfully",
     })
 }
+
+// func CreateMda(c *gin.Context) {
+// 	fmt.Println("controller started")
+//     if  c.BindJSON(&MdaCreateSchema) != nil{
+//         c.JSON(http.StatusBadRequest, gin.H{
+//             "error": "Failed to read request body",
+//         })
+//         return
+//     }
+
+//     stateOfOperation, result := utilities.ValidateState( MdaCreateSchema.StateOfOperation)
+//     if !result {
+//         c.JSON(http.StatusBadRequest, gin.H{
+//             "error": "Incorrect state of origin",
+//         })
+//         return
+//     }
+//    // Transaction Handling
+//    tx := config.DB.Begin() 
+//    result, message, newUserID := myuser.CreateMdaUser(tx,MdaCreateSchema.Email, "dfcv")
+//    if !result {
+//        tx.Rollback() // Rollback if user creation fails
+//        c.JSON(http.StatusBadRequest, gin.H{
+//            "error": message,
+//        })
+//        return
+//    }
+
+//     mda := Mda{
+//         RegisterName: MdaCreateSchema.RegisterName,
+//         Address:MdaCreateSchema.Address,
+//         StateOfOperation:stateOfOperation,
+//         UserID: newUserID,
+//     }
+
+// 	fmt.Println(mda)
+//     mdaresult := tx.Create(&mda) 
+//     if mdaresult.Error != nil {
+//         tx.Rollback() 
+//         c.JSON(http.StatusBadRequest, gin.H{
+//             "error": "Failed to create Mda",
+//         })
+//         return
+//     }
+//     tx.Commit() 
+//     c.JSON(http.StatusOK, gin.H{
+//         "message": "Mda created successfully",
+//     })
+// }
 
 func GetAllMdas(c *gin.Context) {
     fmt.Println("controller started")
@@ -83,19 +131,7 @@ func GetAllMdas(c *gin.Context) {
 
     offset := (page - 1) * limit
 
-    var mdas []struct {
-        Id          uint
-        StateOfOperation    string
-        Name         string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        STCCount     int    `json:"stc_count"`
-        StudentCount int    `json:"student_count"`
-        UserId       uint
-        CreatedAt    time.Time
-        CourseCount  uint
-        Email        string   `json:"email"`
-    }
+    var mdas []GetAllMdaSchema
 
     if result := config.DB.Table("mdas").
     Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
@@ -131,19 +167,7 @@ func GetMdaByID(c *gin.Context) {
         return
     }
 
-    var mda struct {
-        Id            uint
-        Name          string
-        CreatedAt     time.Time
-        CourseCount   uint
-        Address       string
-        Email         string `json:"email"`
-        IsActive      bool   `json:"is_active"`
-        STCCount      int    `json:"stc_count"`
-        StudentCount  int  `json:"student_count"`
-        UserId        uint
-    }
-
+    var mda GetMdaSchema
     result := config.DB.Table("mdas").
         Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -211,18 +235,7 @@ func SearchMda(c *gin.Context) {
         return
     }
 
-    var mdasearch []struct {
-        Id            uint
-        Name          string
-        CreatedAt     time.Time
-        CourseCount   uint
-        Address       string
-        Email         string `json:"email"`
-        IsActive      bool   `json:"is_active"`
-        STCCount      int    `json:"stc_count"`
-        StudentCount  int  `json:"student_count"`
-        UserId        uint
-    }
+    var mdasearch []GetMdaSchema
 
     // Update the SQL query to include the email and isActive fields from the users table
     if err := config.DB.Table("mdas").
@@ -445,56 +458,51 @@ func MdaTotal(c *gin.Context) {
 
 // Get Single Mda Under the Mda auth
 func GetAuthMdaByID(c *gin.Context) {
-    userIDstr, exists := c.Get("user")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized user"})
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
         return
     }
 
-    userID, ok := userIDstr.(uint)
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Invalid Mda ID provided",
+        })
+        return
+    }
+
+    // Check if user is authenticated
+    userID, ok := c.Get("userID")
     if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "Failed to convert user ID to uint"})
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+        return
+    }
+    
+    // Convert user ID to uint
+    authUserID, ok := userID.(uint)
+    if !ok {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
         return
     }
 
-    id := c.Param("id")
-    if id == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "MDA ID is required"})
-        return
-    }
+    var mda GetMdaSchema 
 
-    // id, err := strconv.Atoi(idStr)
-    // if err != nil {
-    //     c.JSON(http.StatusBadRequest, gin.H{
-    //         "message": "Invalid MDA ID provided",
-    //     })
-    //     return
-    // }
-    var mda struct {
-        Id            uint
-        Name          string
-        CreatedAt     time.Time
-        CourseCount   uint
-        Address       string
-        Email         string `json:"email"`
-        IsActive      bool   `json:"is_active"`
-        STCCount      int    `json:"stc_count"`
-        StudentCount  int    `json:"student_count"`
-        UserId        uint
-    }
-
-    // Query to retrieve MDA information and ensure it's associated with the authenticated user
+    // Modify the query to filter by both authenticated user ID and MDA ID
     result := config.DB.Table("mdas").
         Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, users.is_active  AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
         Joins("JOIN users ON mdas.user_id = users.id").
         Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
         Joins("LEFT JOIN students ON mdas.id = students.mda_id").
         Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
-        Where("mdas.user_id = ?", userID). // Ensure MDA is associated with the authenticated user
-        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id,users.email").
-        First(&mda, id)
-        if result.Error != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "MDA not found"})
+        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, users.email").
+        Where("mdas.id = ? AND users.id = ?", id, authUserID). // Filter by both MDA ID and authenticated user ID
+        First(&mda)
+
+    if result.Error != nil {
+        c.JSON(http.StatusNotFound, gin.H{
+            "error": "MDA not found",
+        })
         return
     }
 
@@ -503,28 +511,24 @@ func GetAuthMdaByID(c *gin.Context) {
 
 
 
+func GetAuthAllMdas(c *gin.Context) {
+    fmt.Println("Controller started")
+    limitStr := c.Query("limit")
+    pageStr := c.Query("page")
 
-
-func GetAllAuthMdas(c *gin.Context) {
-    authUser, exists := c.Get("user")
+    // Check if user is authenticated
+    UserID, exists := c.Get("userID")
     if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{
-            "error": "User not authenticated",
-        })
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
         return
     }
     
-    // Type assertion to extract user ID
-    userID, ok := authUser.(uint)
+    // Convert user ID to uint
+    authUserID, ok := UserID.(uint)
     if !ok {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "error": "Failed to get user ID",
-        })
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
         return
     }
-    fmt.Println("controller started")
-    limitStr := c.Query("limit")
-    pageStr := c.Query("page")
 
     limit, err := strconv.Atoi(limitStr)
     if err != nil || limit <= 0 {
@@ -538,34 +542,26 @@ func GetAllAuthMdas(c *gin.Context) {
 
     offset := (page - 1) * limit
 
-    var mdas []struct {
-        Id          uint
-        StateOfOperation    string
-        Name         string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        STCCount     int    `json:"stc_count"`
-        StudentCount int    `json:"student_count"`
-        UserId       uint
-        CreatedAt    time.Time
-        CourseCount  uint
-        Email        string   `json:"email"`
-    }
+    var mdas []GetAllMdaSchema
 
+    // Modify the query to filter by the authenticated user ID
     if result := config.DB.Table("mdas").
-    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
-    Joins("JOIN users ON mdas.user_id = users.id").
-    Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
-    Joins("LEFT JOIN students ON mdas.id = students.mda_id").
-    Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
-    Where("mdas.user_id = ?", userID).
-    Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
-    Limit(limit).
-    Offset(offset).
-    Find(&mdas); result.Error != nil {
+        Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+        Joins("JOIN users ON mdas.user_id = users.id").
+        Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+        Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+        Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+        Where("users.id = ?", authUserID). 
+        Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation").
+        Limit(limit).
+        Offset(offset).
+        Find(&mdas); result.Error != nil {
+        fmt.Printf("Error querying database: %s\n", result.Error.Error())
         c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
         return
     }
 
+    fmt.Printf("Found %d mdas for user %d\n", len(mdas), authUserID)
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
+
