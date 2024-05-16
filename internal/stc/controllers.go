@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -155,20 +153,7 @@ func GetStc(c *gin.Context){
 
     offset := (page - 1) * limit
 
-    var stcs []struct {
-        Id          uint
-        StateOfOperation string
-        CreatedAt time.Time
-        Name        string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CourseCount     uint
-        UserId          uint 
-        Email       string
-        CertifiedStudentCount  uint
-        NonCertifedStudentCount uint
-    }
+    var stcs []GetAllStcSchema
 
     if result := config.DB.Table("stcs").
     Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address, stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
@@ -220,20 +205,7 @@ func GetAllMdaStc(c *gin.Context){
 
     offset := (page - 1) * limit
 
-    var stcs []struct {
-        Id          uint
-        StateOfOperation string
-        CreatedAt time.Time
-        Name        string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CourseCount     uint
-        UserId          uint
-        Email       string
-        CertifiedStudentCount  uint
-        NonCertifedStudentCount uint
-    }
+    var stcs []GetAllStcSchema
 
     if result := config.DB.Table("stcs").
     Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
@@ -262,17 +234,7 @@ func GetStcByID(c *gin.Context){
         return
     }
 
-    var stc struct {
-        Id          uint
-        Name        string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CertifiedStudentCount   uint
-        NonCertifedStudentCount     uint
-        CourseCount     uint
-        UserId          uint
-    }
+    var stc GetStcSchema
     result := config.DB.Table("stcs").
     Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
@@ -314,17 +276,7 @@ func GetMdaStcByID(c *gin.Context){
         return
     }
 
-    var stc struct {
-        Id           uint
-        Name         string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CertifiedStudentCount   uint
-        NonCertifedStudentCount     uint
-        CourseCount     uint
-        UserId          uint
-    }
+    var stc GetStcSchema
     result := config.DB.Table("stcs").
     Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
     Joins("JOIN users ON stcs.user_id = users.id").
@@ -356,17 +308,7 @@ func SearchStc(c *gin.Context) {
         return
     }
 
-    var stcsearch []struct {
-        Id               uint
-        StateOfOperation string
-        CreatedAt        time.Time
-        Name             string
-        Address          string
-        IsActive         bool   `json:"is_active"`
-        StudentCount     uint    `json:"student_count"`
-        CourseCount      uint
-        UserId           uint
-    }
+    var stcsearch []GetAllStcSchema
     if err := config.DB.Table("stcs").
         // Select("stcs.*, users.email, users.is_active").
          // Joins("JOIN users ON stcs.user_id = users.id").
@@ -626,20 +568,8 @@ func GetAllStc(c *gin.Context){
         c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint role"})
         return
     }
-    var stcs []struct {
-        Id          uint
-        StateOfOperation string
-        CreatedAt time.Time
-        Name        string
-        Address      string
-        IsActive     bool   `json:"is_active"`
-        StudentCount uint    `json:"student_count"`
-        CourseCount     uint
-        UserId          uint 
-        Email       string
-        CertifiedStudentCount  uint
-        NonCertifedStudentCount uint
-    }
+    var stcs []GetAllStcSchema
+
   switch(userRole){
   case 1:
     query := config.DB.Table("stcs").
@@ -679,6 +609,9 @@ func GetAllStc(c *gin.Context){
 }
 }
 
+
+
+// Mda
 func StcMdaTotal(c *gin.Context) {
     mdaIDStr, exists := c.Get("mdaID")
     if !exists {

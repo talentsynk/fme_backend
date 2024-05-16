@@ -58,6 +58,7 @@ func main() {
     mdagroup.GET("/get-all-auth-Mda", middleware.RequireFme, mda.GetAllAuthMdas)
 	mdagroup.GET("/profile",middleware.RequireMda,mda.GetMdaProfile)
 
+
     
      stcgroup := r.Group("/stc")
 	 stcgroup.POST("/create-stc",middleware.RequireFme, stc.CreateFmeStc)
@@ -74,7 +75,7 @@ func main() {
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
-     stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
+  stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
     //  stcgroup.GET("/get-stc", middleware.RequireAuth, stc.GetAllStc)
 	 stcgroup.GET("/profile",middleware.RequireStc,stc.GetStcProfile)
 
