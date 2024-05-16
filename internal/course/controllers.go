@@ -137,6 +137,44 @@ func GetCourse(c *gin.Context) {
 		 }
 		 c.JSON(http.StatusOK,gin.H{"course":course})
  
+	 case 2: 
+	 err := config.DB.Table("courses").
+	 Select("COUNT(DISTINCT students.id) AS total_students, COUNT(DISTINCT mda_courses.mda_id) AS total_mda, COUNT(DISTINCT stc_courses.stc_id) AS total_stc, courses.description AS description, courses.name AS name, courses.id AS id").
+	 Joins("LEFT JOIN student_courses ON courses.id = student_courses.course_id").
+	 Joins("LEFT JOIN students ON student_courses.student_id = students.id").
+	 Joins("LEFT JOIN mda_courses ON courses.id = mda_courses.course_id").
+	 Joins("LEFT JOIN stc_courses ON courses.id = stc_courses.course_id").
+	 Where("courses.id = ?", id).
+	 Group("courses.id").
+	 Scan(&course).Error
+	  if err!=nil {
+		  c.JSON(http.StatusBadRequest,gin.H{
+			  "message":"error retrieving students",
+		  })
+		  return
+	  }
+	  c.JSON(http.StatusOK,gin.H{"course":course})
+
+
+
+	case 3:
+		err := config.DB.Table("courses").
+        Select("COUNT(DISTINCT students.id) AS total_students, COUNT(DISTINCT mda_courses.mda_id) AS total_mda, COUNT(DISTINCT stc_courses.stc_id) AS total_stc, courses.description AS description, courses.name AS name, courses.id AS id").
+        Joins("LEFT JOIN student_courses ON courses.id = student_courses.course_id").
+        Joins("LEFT JOIN students ON student_courses.student_id = students.id").
+        Joins("LEFT JOIN mda_courses ON courses.id = mda_courses.course_id").
+        Joins("LEFT JOIN stc_courses ON courses.id = stc_courses.course_id").
+        Where("courses.id = ?", id).
+        Group("courses.id").
+        Scan(&course).Error
+		 if err!=nil {
+			 c.JSON(http.StatusBadRequest,gin.H{
+				 "message":"error retrieving students",
+			 })
+			 return
+		 }
+		 c.JSON(http.StatusOK,gin.H{"course":course})
+		 
 	 default:
 		fmt.Println(userID)
 		 c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
@@ -190,6 +228,30 @@ func GetAllCourses(c *gin.Context) {
 	switch (userRole) {
 	case 1:
 	   err := config.DB.Table("courses").
+	   Select("id,name,description").
+	   Find(&courses).Error
+		if err!=nil {
+			c.JSON(http.StatusBadRequest,gin.H{
+				"message":"error retrieving students",
+			})
+			return
+		}
+		c.JSON(http.StatusOK,gin.H{"course":courses})
+
+	case 2:
+		err := config.DB.Table("courses").
+	   Select("id,name,description").
+	   Find(&courses).Error
+		if err!=nil {
+			c.JSON(http.StatusBadRequest,gin.H{
+				"message":"error retrieving students",
+			})
+			return
+		}
+		c.JSON(http.StatusOK,gin.H{"course":courses})
+
+	case 3:
+		err := config.DB.Table("courses").
 	   Select("id,name,description").
 	   Find(&courses).Error
 		if err!=nil {

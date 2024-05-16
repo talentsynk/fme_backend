@@ -656,3 +656,45 @@ func StcMdaTotal(c *gin.Context) {
     })
 }
 
+
+func GetStcProfile(c *gin.Context) {
+    stcIDstr,exists := c.Get("stcID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    stcID,ok := stcIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var stc struct {
+        Id          uint
+        Name        string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        StudentCount uint    `json:"student_count"`
+        CertifiedStudentCount   uint
+        NonCertifedStudentCount     uint
+        CourseCount     uint
+        UserId          uint
+    }
+    result := config.DB.Table("stcs").
+            Select("stcs.id AS id, stcs.name AS name, stcs.address AS address, users.is_active AS is_active, users.id AS user_id, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
+            Joins("JOIN users ON stcs.user_id = users.id").
+            Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+            Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, stcs.state").
+            First(&stc, stcID)
+    if result.Error != nil {
+    c.JSON(http.StatusNotFound, gin.H{
+        "error": "STC not found",
+    })
+    return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"stc":stc})
+}
