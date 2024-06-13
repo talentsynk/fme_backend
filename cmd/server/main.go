@@ -73,7 +73,7 @@ func main() {
      stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
-  stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
+  	 stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
 	 stcgroup.GET("/profile",middleware.RequireStc,stc.GetStcProfile)
 
 
@@ -83,6 +83,10 @@ func main() {
 
 
 	studentgroup.POST("/create-stc",middleware.RequireStc,student.CreateStcStudent)
+	studentgroup.POST("/create-mda-csv",middleware.RequireMda,student.CreateMdaStudentFromCsv)
+	studentgroup.POST("/create-stc-csv",middleware.RequireStc,student.CreateStcStudentFromCsv)
+	studentgroup.POST("/create-fme-csv",middleware.RequireFme,student.CreateFmeStudentFromCsv)
+	
 	studentgroup.GET("/all",middleware.RequireAuth,student.GetAllStudents)
 	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
 	studentgroup.GET("/total-info",middleware.RequireAuth,student.GetTotalStudentInfo)

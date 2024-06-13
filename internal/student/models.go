@@ -24,4 +24,6 @@ type Student struct {
 	UserID uint
 	MdaID uint
 	StcID uint
+	NationalIdentityNumber string	`gorm:"not null; default:12345678912"`
+	LocalGovernment	string	`gorm:"not null; default:'kosofe'"`
 }

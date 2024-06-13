@@ -4,20 +4,7 @@ import "time"
 
 // import "fme_backend/internal/course"
 
-var CreateStudentSchema struct {
-	Firstname string
-	Lastname string
-	Gender string
-	PhoneNumber	string
-	StateOfOrigin string
-	StateOfResidence string
-	Email string
-	DOBstring string
-	SID		string
-	NsqLevel	string
-	CourseID	uint
-	Address string
-}
+var CreateStudentSchema CreateStudentSchematype
 
 type GetAllStudentSchema struct {
     ID    uint
@@ -55,4 +42,22 @@ type TotalStudentInfo struct {
 	TotalStudents int
 	TotalActiveStudents	int
 	TotalInactiveStudents	int
+}
+
+type CreateStudentSchematype struct {
+	Firstname string
+	Lastname string
+	Gender string
+	PhoneNumber	string
+	StateOfOrigin string
+	StateOfResidence string
+	Email string
+	DOBstring string
+	SID		string
+	NsqLevel	string
+	CourseID	uint
+	Address string
+	NationalIdentityNumber	string
+	LocalGovernment		string
+
 }
