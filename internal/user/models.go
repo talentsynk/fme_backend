@@ -13,8 +13,9 @@ type User struct {
     Password       string         `gorm:"not null"`
     OTP            string         
     OTPExpiresAt   time.Time   
-    OTPVerified bool 
-    Role int `gorm:"not null"`
-    IsActive bool `gorm:"not null"`
+    OTPVerified    bool 
+    Role           int `gorm:"not null"`
+    IsActive       bool `gorm:"not null"`
 
 }
+

@@ -65,54 +65,7 @@ func CreateMda(c *gin.Context) {
     })
 }
 
-// func CreateMda(c *gin.Context) {
-// 	fmt.Println("controller started")
-//     if  c.BindJSON(&MdaCreateSchema) != nil{
-//         c.JSON(http.StatusBadRequest, gin.H{
-//             "error": "Failed to read request body",
-//         })
-//         return
-//     }
 
-//     stateOfOperation, result := utilities.ValidateState( MdaCreateSchema.StateOfOperation)
-//     if !result {
-//         c.JSON(http.StatusBadRequest, gin.H{
-//             "error": "Incorrect state of origin",
-//         })
-//         return
-//     }
-//    // Transaction Handling
-//    tx := config.DB.Begin() 
-//    result, message, newUserID := myuser.CreateMdaUser(tx,MdaCreateSchema.Email, "dfcv")
-//    if !result {
-//        tx.Rollback() // Rollback if user creation fails
-//        c.JSON(http.StatusBadRequest, gin.H{
-//            "error": message,
-//        })
-//        return
-//    }
-
-//     mda := Mda{
-//         RegisterName: MdaCreateSchema.RegisterName,
-//         Address:MdaCreateSchema.Address,
-//         StateOfOperation:stateOfOperation,
-//         UserID: newUserID,
-//     }
-
-// 	fmt.Println(mda)
-//     mdaresult := tx.Create(&mda) 
-//     if mdaresult.Error != nil {
-//         tx.Rollback() 
-//         c.JSON(http.StatusBadRequest, gin.H{
-//             "error": "Failed to create Mda",
-//         })
-//         return
-//     }
-//     tx.Commit() 
-//     c.JSON(http.StatusOK, gin.H{
-//         "message": "Mda created successfully",
-//     })
-// }
 
 func GetAllMdas(c *gin.Context) {
     fmt.Println("controller started")
