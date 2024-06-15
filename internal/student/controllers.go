@@ -1,11 +1,14 @@
 package student
 
 import (
+	"encoding/csv"
+	"errors"
 	"fme_backend/internal/config"
 	"fme_backend/internal/course"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -69,6 +72,14 @@ func CreateFmeStudent(c *gin.Context) {
         return
     }
 
+    result = utilities.VeriryNINFormat(CreateStudentSchema.NationalIdentityNumber)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect NIN format",
+        })
+        return
+    }
+
     // Transaction Handling
     tx := config.DB.Begin() // Begin a transaction
 
@@ -95,6 +106,8 @@ func CreateFmeStudent(c *gin.Context) {
         NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
+        NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
+        LocalGovernment: CreateStudentSchema.LocalGovernment,
     }
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
@@ -196,6 +209,14 @@ func CreateMdaStudent(c *gin.Context) {
         })
         return
     }
+
+    result = utilities.VeriryNINFormat(CreateStudentSchema.NationalIdentityNumber)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect NIN format",
+        })
+        return
+    }
     
 
     // Transaction Handling
@@ -224,6 +245,8 @@ func CreateMdaStudent(c *gin.Context) {
         SID: CreateStudentSchema.SID,
         NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
+        LocalGovernment: CreateStudentSchema.LocalGovernment,
+        NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
     }
     fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
@@ -326,6 +349,14 @@ func CreateStcStudent(c *gin.Context) {
         return
     }
 
+    result = utilities.VeriryNINFormat(CreateStudentSchema.NationalIdentityNumber)
+    if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect NIN format",
+        })
+        return
+    }
+
     // Transaction Handling
     tx := config.DB.Begin() // Begin a transaction
 
@@ -352,6 +383,8 @@ func CreateStcStudent(c *gin.Context) {
         NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
+        LocalGovernment: CreateStudentSchema.LocalGovernment,
+        NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
     }
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
@@ -940,6 +973,444 @@ func GetTotalStudentInfo(c *gin.Context) {
         c.JSON(http.StatusUnauthorized,gin.H{"message":"default unauthorized user"})
         return
     }
+}
+
+
+func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
+    if len(record) < 14 {
+        return CreateStudentSchematype{}, fmt.Errorf("incorrect number of fields in the CSV record")
+    }
+
+    _, err := utilities.ParseDoB(record[5])
+    if err != nil {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid date of birth format: %v", err)
+    }
+
+    gender, valid := utilities.ValidateGender(record[2])
+    if !valid {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid gender")
+    }
+
+    stateOfOrigin, valid := utilities.ValidateState(record[3])
+    if !valid {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid state of origin")
+    }
+
+    stateOfResidence, valid := utilities.ValidateState(record[4])
+    if !valid {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid state of residence")
+    }
+
+    if !utilities.IsNigerianPhoneNumber("0"+record[7]) {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid phone number")
+    }
+
+    courseID, err := strconv.ParseUint(record[11], 10, 32)
+    if err != nil {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid course ID: %v", err)
+    }
+
+    if !utilities.VeriryNINFormat(record[12]) {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid NIN format: %v", err)
+        
+    }
+
+    return CreateStudentSchematype{
+        Firstname:        record[0],
+        Lastname:         record[1],
+        Gender:           gender,
+        StateOfOrigin:    stateOfOrigin,
+        StateOfResidence: stateOfResidence,
+        DOBstring:        record[5],
+        Email:            record[6],
+        PhoneNumber:      "0"+record[7],
+        SID:              record[8],
+        NsqLevel:         record[9],
+        Address:          record[10],
+        CourseID:         uint(courseID),
+        NationalIdentityNumber: record[12],
+        LocalGovernment: record[13],
+    }, nil
+}
+
+func createMdaStudentInstance(mdaID uint, schema CreateStudentSchematype) (Student, error) {
+
+    dob, err := utilities.ParseDoB(schema.DOBstring)
+    if err != nil {
+        return Student{}, errors.New("wrong date format")
+    }
+    tx := config.DB.Begin()
+
+    // Create user with transaction
+    result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
+    if !result {
+        tx.Rollback()
+        return Student{}, fmt.Errorf(message)
+    }
+
+
+
+    student := Student{
+        Firstname:        schema.Firstname,
+        Lastname:         schema.Lastname,
+        Gender:           schema.Gender,
+        StateOfOrigin:    schema.StateOfOrigin,
+        StateOfResidence: schema.StateOfResidence,
+        DOB:              dob,
+        UserID:           newUserID,
+        MdaID:            mdaID,
+        PhoneNumber:      schema.PhoneNumber,
+        SID:              schema.SID,
+        NsqLevel:         schema.NsqLevel,
+        Address:          schema.Address,
+    }
+
+    if err := tx.Create(&student).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student: %v", err)
+    }
+
+    studentCourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID:  schema.CourseID,
+    }
+
+    if err := tx.Create(&studentCourse).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student course: %v", err)
+    }
+
+    tx.Commit()
+    return student, nil
+}
+
+func createStcStudentInstance(stcID uint, schema CreateStudentSchematype) (Student, error) {
+
+    dob, err := utilities.ParseDoB(schema.DOBstring)
+    if err != nil {
+        return Student{}, errors.New("wrong date format")
+    }
+    tx := config.DB.Begin()
+
+    // Create user with transaction
+    result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
+    if !result {
+        tx.Rollback()
+        return Student{}, fmt.Errorf(message)
+    }
+
+
+
+    student := Student{
+        Firstname:        schema.Firstname,
+        Lastname:         schema.Lastname,
+        Gender:           schema.Gender,
+        StateOfOrigin:    schema.StateOfOrigin,
+        StateOfResidence: schema.StateOfResidence,
+        DOB:              dob,
+        UserID:           newUserID,
+        StcID:            stcID,
+        PhoneNumber:      schema.PhoneNumber,
+        SID:              schema.SID,
+        NsqLevel:         schema.NsqLevel,
+        Address:          schema.Address,
+    }
+
+    if err := tx.Create(&student).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student: %v", err)
+    }
+
+    studentCourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID:  schema.CourseID,
+    }
+
+    if err := tx.Create(&studentCourse).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student course: %v", err)
+    }
+
+    tx.Commit()
+    return student, nil
+}
+
+
+func createFmeStudentInstance(schema CreateStudentSchematype) (Student, error) {
+
+    dob, err := utilities.ParseDoB(schema.DOBstring)
+    if err != nil {
+        return Student{}, errors.New("wrong date format")
+    }
+    tx := config.DB.Begin()
+
+    // Create user with transaction
+    result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
+    if !result {
+        tx.Rollback()
+        return Student{}, fmt.Errorf(message)
+    }
+
+
+
+    student := Student{
+        Firstname:        schema.Firstname,
+        Lastname:         schema.Lastname,
+        Gender:           schema.Gender,
+        StateOfOrigin:    schema.StateOfOrigin,
+        StateOfResidence: schema.StateOfResidence,
+        DOB:              dob,
+        UserID:           newUserID,
+        Fmestudent:       true,
+        PhoneNumber:      schema.PhoneNumber,
+        SID:              schema.SID,
+        NsqLevel:         schema.NsqLevel,
+        Address:          schema.Address,
+    }
+
+    if err := tx.Create(&student).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student: %v", err)
+    }
+
+    studentCourse := course.StudentCourse{
+        StudentID: student.ID,
+        CourseID:  schema.CourseID,
+    }
+
+    if err := tx.Create(&studentCourse).Error; err != nil {
+        tx.Rollback()
+        return Student{}, fmt.Errorf("failed to create student course: %v", err)
+    }
+
+    tx.Commit()
+    return student, nil
+}
+
+
+func CreateMdaStudentFromCsv(c *gin.Context) {
+    // Retrieve the MDA ID
+    mdaIDStr, exists := c.Get("mdaID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+    mdaID, ok := mdaIDStr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+
+    // Get the CSV file from the request
+    file, _, err := c.Request.FormFile("file")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read request body",
+        })
+        return
+    }
+    defer file.Close()
+
+    // Read the CSV file
+    reader := csv.NewReader(file)
+    var students []Student
+
+    // Skip the header
+    if _, err := reader.Read(); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read CSV header",
+        })
+        return
+    }
+
+    for {
+        record, err := reader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Failed to read CSV file",
+            })
+            return
+        }
+
+        // Parse and validate each record
+        studentSchema, err := parseAndValidateRecord(record)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Invalid data: %v", err),
+            })
+            return
+        }
+
+        // Create user and student instances
+        student, err := createMdaStudentInstance(mdaID, studentSchema)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Failed to create student: %v", err),
+            })
+            return
+        }
+
+        students = append(students, student)
+    }
+
+    // If all students are successfully created
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Students created successfully",
+        "students": students,
+    })
+}
+
+
+
+func CreateFmeStudentFromCsv(c *gin.Context) {
+    // Get the CSV file from the request
+    file, _, err := c.Request.FormFile("file")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read request body",
+        })
+        return
+    }
+    defer file.Close()
+
+    // Read the CSV file
+    reader := csv.NewReader(file)
+    var students []Student
+
+    // Skip the header
+    if _, err := reader.Read(); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read CSV header",
+        })
+        return
+    }
+
+    for {
+        record, err := reader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Failed to read CSV file",
+            })
+            return
+        }
+
+        // Parse and validate each record
+        studentSchema, err := parseAndValidateRecord(record)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Invalid data: %v", err),
+            })
+            return
+        }
+
+        // Create user and student instances
+        student, err := createFmeStudentInstance(studentSchema)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Failed to create student: %v", err),
+            })
+            return
+        }
+
+        students = append(students, student)
+    }
+
+    // If all students are successfully created
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Students created successfully",
+        "students": students,
+    })
+}
+
+
+
+func CreateStcStudentFromCsv(c *gin.Context) {
+    // Retrieve the MDA ID
+    stcIDStr, exists := c.Get("stcID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+    stcID, ok := stcIDStr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Problem with the authorization token",
+        })
+        return
+    }
+
+    // Get the CSV file from the request
+    file, _, err := c.Request.FormFile("file")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read request body",
+        })
+        return
+    }
+    defer file.Close()
+
+    // Read the CSV file
+    reader := csv.NewReader(file)
+    var students []Student
+
+    // Skip the header
+    if _, err := reader.Read(); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read CSV header",
+        })
+        return
+    }
+
+    for {
+        record, err := reader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Failed to read CSV file",
+            })
+            return
+        }
+
+        // Parse and validate each record
+        studentSchema, err := parseAndValidateRecord(record)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Invalid data: %v", err),
+            })
+            return
+        }
+
+        // Create user and student instances
+        student, err := createStcStudentInstance(stcID, studentSchema)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": fmt.Sprintf("Failed to create student: %v", err),
+            })
+            return
+        }
+
+        students = append(students, student)
+    }
+
+    // If all students are successfully created
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Students created successfully",
+        "students": students,
+    })
 }
 
 

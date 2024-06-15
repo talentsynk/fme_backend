@@ -36,3 +36,7 @@ func GetDatabaseURL() string {
 func GetHashSecret() string {
 	return os.Getenv("HASH_SECRET")
 }
+
+func GetResendSecret() string {
+    return os.Getenv("RESEND_SECRET")
+}
