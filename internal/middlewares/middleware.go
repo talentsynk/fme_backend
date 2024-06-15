@@ -308,7 +308,7 @@ func RequireEmployer(c *gin.Context) {
 
         c.Set("userID", user.ID) 
         c.Set("employerID", employer.ID)
-        c.Set("userRole", user.Role)// Ensure this key matches what you use in CreateEmployer
+        c.Set("userRole", user.Role)
         c.Next()
     } else {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})

@@ -112,6 +112,8 @@ func main() {
 
 	employergroup  := r.Group("/employer")
 	employergroup.POST("/create-employer", employer.CreateEmployer)
+	employergroup.GET("/get-employer", middleware.RequireEmployer, employer.GetEmployer)
+	employergroup.GET("/:id", middleware.RequireEmployer, employer.GetEmployerByID)
 
 	r.Run(":8000")
 }

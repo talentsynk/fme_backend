@@ -6,6 +6,7 @@ import (
 	"fme_backend/internal/utilities"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -95,22 +96,66 @@ func CreateEmployer(c *gin.Context) {
 	fmt.Println(employer)
 }
 
-func   GetEmployer(c *gin.Context){
-	employerID, exists := c.Get("employerID")
-     if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message":"authorized user"})
-		return
-	 }
 
-	var employer []Employer
 
-	if err := config.DB.Where("employer_id = ?", employerID).First(&employer).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":"Employer not found",
+
+func GetEmployer(c *gin.Context) {
+	employerIDstr, exists := c.Get("employerID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "unauthorized user",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, employer)
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint"})
+		return
+	}
+
+	var employer GetEmployerSchema
+
+	result := config.DB.Table("employers").
+		Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
+		First(&employer, employerID)
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Employer not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"employer": employer})
+}
+
+
+func GetEmployerByID(c *gin.Context){
+	employerIDParam := c.Param("id")
+     
+	employerID, err := strconv.Atoi(employerIDParam)
+     if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":"Invalid employer ID",
+		})
+		return 
+	 }
+
+	 var employer GetEmployerSchema
+      result := config.DB.Table("employers").
+	  Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
+	  Where("id = ?", employerID).
+	  First(&employer)
+
+  if result.Error != nil{
+	c.JSON(http.StatusNotFound, gin.H{
+		"error":"Employer not found",
+	})
+
+	return 
+  }
+
+  c.JSON(http.StatusOK, gin.H{"employer":employer})
 
 }
