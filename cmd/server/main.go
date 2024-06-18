@@ -11,10 +11,9 @@ import (
 	myuser "fme_backend/internal/user"
 	employer "fme_backend/internal/employers"
 
-
+     job "fme_backend/internal/jobs"
 	"time"
-
-	"github.com/gin-contrib/cors"
+    "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -114,6 +113,10 @@ func main() {
 	employergroup.POST("/create-employer", employer.CreateEmployer)
 	employergroup.GET("/get-employer", middleware.RequireEmployer, employer.GetEmployer)
 	employergroup.GET("/:id", middleware.RequireEmployer, employer.GetEmployerByID)
+  
 
+	jobgroup := r.Group("/job")
+	jobgroup.POST("/create-job", middleware.RequireEmployer, job.CreateJob )
+	
 	r.Run(":8000")
 }

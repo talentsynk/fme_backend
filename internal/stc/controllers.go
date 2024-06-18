@@ -112,11 +112,11 @@ func CreateMdaStc(c *gin.Context){
   }
 
   stc := Stc{
-    Name:              StcCreateSchema.Name,
-    Address:           StcCreateSchema.Address,
-    State: 			   state,
-    UserID: newUserID,
-    MdaID: mdaID,
+    Name:StcCreateSchema.Name,
+    Address:StcCreateSchema.Address,
+    State:state,
+    UserID:newUserID,
+    MdaID:mdaID,
 }
 fmt.Println(stc)
 stcresult := tx.Create(&stc) // Create student within transaction

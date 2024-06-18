@@ -8,6 +8,7 @@ import (
 	"fme_backend/internal/stc"
 	"fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
+	 job "fme_backend/internal/jobs"
 )
 
 func init() {
@@ -27,5 +28,6 @@ func main() {
 		&course.MdaCourse{},
 		&course.StcCourse{},
 		&employer.Employer{},
+		&job.Job{},
 	)
 }
