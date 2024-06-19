@@ -381,3 +381,20 @@ func GetTopStc(c *gin.Context) {
 
     }
 }
+
+
+
+
+// Job Dashboard
+
+func GetJobPostSummary(c *gin.Context){
+
+}
+
+func GetJobSummary(c *gin.Context){
+
+}
+
+func GetJobStatusSummary(c *gin.Context){
+    
+}

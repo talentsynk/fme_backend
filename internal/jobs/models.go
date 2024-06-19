@@ -9,14 +9,13 @@ type Job  struct {
     gorm.Model
 
 	JobTitle       string   `gorm:"type:varchar(255);not null"`
-	ArtisanType    string   `gorm:"type:varchar(255);not null"`
 	Location       string   `gorm:"type:varchar(255);not null"`
-	Role           string   `gorm:"type:varchar(255);not null"`
 	Budget         string   `gorm:"type:varchar(255);not null"`
-	Time           string   `gorm:"type:varchar(255);not null"`
+	JobType        string   `gorm:"type:varchar(255);not null"`
 	Category       string   `gorm:"type:varchar(255);not null"`
 	Description    string   `gorm:"not null"`
 	Requirement    string   `gorm:"not null"`
+	Responsibilities string `gorm:"not null"`
 	EmployerID     uint
 
 }
