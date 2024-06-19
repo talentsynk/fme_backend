@@ -12,17 +12,17 @@ var MdaCreateSchema struct {
 }
 
 type GetAllMdaSchema struct{
-	Id            uint
-	StateOfOperation string
-	Name           string
-	Address        string
-	IsActive       bool   `json:"is_active"`
-	STCCount       uint    `json:"stc_count"`
-	StudentCount   uint    `json:"student_count"`
-	UserId         uint
-	CreatedAt      time.Time
-	CourseCount    uint
-	Email          string   `json:"email"`
+	Id                uint
+	StateOfOperation  string
+	Name              string
+	Address           string
+	IsActive          bool   `json:"is_active"`
+	STCCount          uint    `json:"stc_count"`
+	StudentCount      uint    `json:"student_count"`
+	UserId            uint
+	CreatedAt         time.Time
+	CourseCount       uint
+	Email             string   `json:"email"`
 }
 
 type GetMdaSchema struct {

@@ -117,6 +117,7 @@ func main() {
 
 	jobgroup := r.Group("/job")
 	jobgroup.POST("/create-job", middleware.RequireEmployer, job.CreateJob )
-	
+	jobgroup.GET("/get-jobs", middleware.RequireEmployer, job.GetAllJobs)
+	jobgroup.GET("/get-job/:id", middleware.RequireEmployer,  job.GetJobID )
 	r.Run(":8000")
 }
