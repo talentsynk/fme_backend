@@ -16,15 +16,18 @@ var CreateJobSchema struct {
 }
 
 type GetAllJobsSchema struct{
-	Id            uint
-	FirstName     string
-	LastName      string 
-    CreatedAt     time.Time
-    JobType       string 
-    Location      string 
-    Budget        string 
-    Description   string 
-    EmployerID    uint  
+	Id               uint
+	FirstName        string 
+	LastName         string 
+    Location         string
+    Description      string 
+    JobType          string  
+    JobTitle         string 
+    Requirement      string
+	Responsibilities string
+    CreatedAt        time.Time
+	EmployerID       uint  
+ 
 }
 
 type GetJobSchema struct {
