@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
      employer "fme_backend/internal/employers"
+      student "fme_backend/internal/student"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -308,6 +309,75 @@ func RequireEmployer(c *gin.Context) {
 
         c.Set("userID", user.ID) 
         c.Set("employerID", employer.ID)
+        c.Set("userRole", user.Role)
+        c.Next()
+    } else {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})
+        c.Abort()
+    }
+}
+
+
+
+
+
+func RequireStudent(c *gin.Context) {
+    authHeader := c.GetHeader("Authorization")
+    if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+        c.Abort()
+        return
+    }
+
+    tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+    secret := config.GetHashSecret()
+
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+        }
+        return []byte(secret), nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})
+        c.Abort()
+        return
+    }
+
+    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+        if float64(time.Now().Unix()) > claims["exp"].(float64) {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+            c.Abort()
+            return
+        }
+
+        var user myuser.User
+        config.DB.First(&user, "email = ?", claims["sub"])
+
+        if user.ID == 0 {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+            c.Abort()
+            return
+        }
+
+        if user.Role != 4 {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Employer"})
+            c.Abort()
+            return
+        }
+
+        var student  student.Student
+        config.DB.First(&student, "user_id = ?", user.ID)
+        if student.ID == 0 {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Not an Employer user 5"})
+            c.Abort()
+            return
+        }
+
+
+        c.Set("userID", user.ID) 
+        c.Set("studentID", student.ID)
         c.Set("userRole", user.Role)
         c.Next()
     } else {

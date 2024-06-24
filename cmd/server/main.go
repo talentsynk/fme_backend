@@ -121,5 +121,6 @@ func main() {
 	jobgroup.GET("/get-job/:id", middleware.RequireAuth,  job.GetJobID)
 	jobgroup.GET("/get-latest-job", middleware.RequireAuth, job.GetLatestJobs)
 	jobgroup.GET("/search-job", middleware.RequireAuth, job.SearchJob)
+	jobgroup.POST("/applied", middleware.RequireStudent,  job.ApplyForJob)
 	r.Run(":8000")
 }

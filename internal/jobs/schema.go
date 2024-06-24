@@ -31,17 +31,20 @@ type GetAllJobsSchema struct{
 }
 
 type GetJobSchema struct {
-	Id               uint
-	FirstName        string 
-	LastName         string 
-    Location         string
-    Description      string 
-    JobType          string  
+	Id                 uint
+	FirstName          string 
+	LastName           string 
+    Location           string
+    Description        string 
+    JobType            string  
     JobTitle           string 
-    Requirement      string
-	Responsibilities string
-    CreatedAt        time.Time
-	EmployerID       uint  
+    Requirement        string
+	Responsibilities   string
+    CreatedAt          time.Time
+	EmployerID         uint  
 
 }
+
+
+
 
