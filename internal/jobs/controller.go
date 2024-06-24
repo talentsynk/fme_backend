@@ -1,13 +1,14 @@
 package jobs
 
-
 import (
-	 "fmt"
-	 "net/http"
-     "github.com/gin-gonic/gin"
-	 "fme_backend/internal/config"
-	 "strconv"
-	 "time"
+	"errors"
+	"fme_backend/internal/config"
+	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+     "gorm.io/gorm"
+	"github.com/gin-gonic/gin"
 )
 
 func CreateJob(c *gin.Context) {
@@ -192,52 +193,116 @@ func GetAllFulltimeJobs(c *gin.Context){
 }
 
 
-// func SearchJob(c *gin.Context){
-// 	query := c.Query("query")
-// 	if query == ""{
-// 		c.JSON(http.StatusBadGateway, gin.H{"error":"Search query is required"})
-// 		return
-// 	}
+func SearchJob(c *gin.Context){
+	query := c.Query("query")
+	if query == ""{
+		c.JSON(http.StatusBadGateway, gin.H{"error":"Search query is required"})
+		return
+	}
 
-
-// 	var jobsearch []GetAllJobsSchema
-// 	if err := config.DB.Table("jobs").
-// 	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-// 	Joins("JOIN employers ON jobs.employer_id = employers.id").
-// 	Where("jobs.job_title LIKE ? OR jobs.location LIKE ? OR jobs.budget LIKE ? OR jobs.category LIKE ? OR jobs.job_type LIKE ? OR jobs.description LIKE ? OR employers.first_name LIKE ? OR employers.last_name LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%").
-// 	Find(&jobsearch).Error; err != nil {
-// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
-// 	return
-// }
-
-
-//   if len(jobsearch) == 0 {
-// 	c.JSON(http.StatusOK, gin.H{"message": "No matching mdas found"})
-//   }
-
-// 	c.JSON(http.StatusOK, jobsearch)
-// }
-
-
-
-func SearchJob(c *gin.Context) {
-	job_title := c.Query("job_title")
-	
 
 	var jobsearch []GetAllJobsSchema
 	if err := config.DB.Table("jobs").
-		Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-		Joins("JOIN employers ON jobs.employer_id = employers.id").
-		Where("jobs.job_title LIKE ?", "%"+job_title+"%").
-		Find(&jobsearch).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
+	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+	Joins("JOIN employers ON jobs.employer_id = employers.id").
+	Where("jobs.job_title LIKE ? OR jobs.location LIKE ? OR jobs.budget LIKE ? OR jobs.category LIKE ? OR jobs.job_type LIKE ? OR jobs.description LIKE ? OR employers.first_name LIKE ? OR employers.last_name LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%").
+	Find(&jobsearch).Error; err != nil {
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
+	return
+}
+
+
+  if len(jobsearch) == 0 {
+	c.JSON(http.StatusOK, gin.H{"message": "No matching mdas found"})
+  }
+
+	c.JSON(http.StatusOK, jobsearch)
+}
+
+
+
+// func SearchJob(c *gin.Context) {
+// 	job_title := c.Query("job_title")
+	
+
+// 	var jobsearch []GetAllJobsSchema
+// 	if err := config.DB.Table("jobs").
+// 		Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+// 		Joins("JOIN employers ON jobs.employer_id = employers.id").
+// 		Where("jobs.job_title LIKE ?", "%"+job_title+"%").
+// 		Find(&jobsearch).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
+// 		return
+// 	}
+
+// 	if len(jobsearch) == 0 {
+// 		c.JSON(http.StatusOK, gin.H{"message": "No matching jobs found"})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{"jobs": jobsearch})
+// }
+
+
+
+func ApplyForJob(c *gin.Context) {
+    // Extract studentID from the context (assuming authentication middleware sets this)
+    studentIDStr, exist := c.Get("studentID")
+    if !exist {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+        return
+    }
+
+    studentID, ok := studentIDStr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+        return
+    }
+
+    // Get the job ID from the request
+    var applyJobSchema struct {
+        JobID uint `json:"job_id" binding:"required"`
+    }
+
+    if err := c.ShouldBindJSON(&applyJobSchema); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+        return
+    }
+
+    // Begin a new transaction
+    tx := config.DB.Begin()
+
+    // Check if the application already exists
+	var existingApplication JobApplication
+	if result := tx.Where("job_id = ? AND student_id = ?", applyJobSchema.JobID, studentID).First(&existingApplication); result.Error == nil {
+		tx.Rollback()
+		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this job"})
+		return
+	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error occurred while checking for existing application"})
 		return
 	}
+	
 
-	if len(jobsearch) == 0 {
-		c.JSON(http.StatusOK, gin.H{"message": "No matching jobs found"})
-		return
-	}
+    // Create the new job application
+    jobApplication := JobApplication{
+        JobID:     applyJobSchema.JobID,
+        StudentID: studentID,
+    }
 
-	c.JSON(http.StatusOK, gin.H{"jobs": jobsearch})
+    if result := tx.Create(&jobApplication); result.Error != nil {
+        tx.Rollback()
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to apply for the job", "details": result.Error.Error()})
+        return
+    }
+
+    // Commit the transaction
+    if err := tx.Commit().Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
 }
