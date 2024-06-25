@@ -9,6 +9,7 @@ import (
 	"time"
      "gorm.io/gorm"
 	"github.com/gin-gonic/gin"
+	
 )
 
 func CreateJob(c *gin.Context) {
@@ -245,64 +246,209 @@ func SearchJob(c *gin.Context){
 
 
 
-func ApplyForJob(c *gin.Context) {
-    // Extract studentID from the context (assuming authentication middleware sets this)
-    studentIDStr, exist := c.Get("studentID")
-    if !exist {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-        return
-    }
+// func ApplyForJob(c *gin.Context) {
+//     studentIDStr, exist := c.Get("studentID")
+//     if !exist {
+//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+//         return
+//     }
 
-    studentID, ok := studentIDStr.(uint)
-    if !ok {
-        c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-        return
-    }
+//     studentID, ok := studentIDStr.(uint)
+//     if !ok {
+//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+//         return
+//     }
 
-    // Get the job ID from the request
-    var applyJobSchema struct {
-        JobID uint `json:"job_id" binding:"required"`
-    }
+//     // Get the job ID from the request
+//     var applyJobSchema struct {
+//         JobID uint `json:"job_id" binding:"required"`
+//     }
 
-    if err := c.ShouldBindJSON(&applyJobSchema); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-        return
-    }
+//     if err := c.ShouldBindJSON(&applyJobSchema); err != nil {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+//         return
+//     }
 
-    // Begin a new transaction
-    tx := config.DB.Begin()
+//     // Begin a new transaction
+//     tx := config.DB.Begin()
 
-    // Check if the application already exists
-	var existingApplication JobApplication
-	if result := tx.Where("job_id = ? AND student_id = ?", applyJobSchema.JobID, studentID).First(&existingApplication); result.Error == nil {
-		tx.Rollback()
-		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this job"})
-		return
-	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error occurred while checking for existing application"})
-		return
-	}
+//     // Check if the application already exists
+// 	var existingApplication JobApplication
+// 	if result := tx.Where("job_id = ? AND student_id = ?", applyJobSchema.JobID, studentID).First(&existingApplication); result.Error == nil {
+// 		tx.Rollback()
+// 		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this job"})
+// 		return
+// 	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+// 		tx.Rollback()
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error occurred while checking for existing application"})
+// 		return
+// 	}
 	
 
-    // Create the new job application
-    jobApplication := JobApplication{
-        JobID:     applyJobSchema.JobID,
-        StudentID: studentID,
-    }
+//     // Create the new job application
+//     jobApplication := JobApplication{
+//         JobID:     applyJobSchema.JobID,
+//         StudentID: studentID,
+//     }
 
-    if result := tx.Create(&jobApplication); result.Error != nil {
-        tx.Rollback()
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to apply for the job", "details": result.Error.Error()})
-        return
-    }
+//     if result := tx.Create(&jobApplication); result.Error != nil {
+//         tx.Rollback()
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to apply for the job", "details": result.Error.Error()})
+//         return
+//     }
 
-    // Commit the transaction
-    if err := tx.Commit().Error; err != nil {
-        tx.Rollback()
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
-        return
-    }
+//     // Commit the transaction
+//     if err := tx.Commit().Error; err != nil {
+//         tx.Rollback()
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
+//         return
+//     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
+//     c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
+// }
+
+
+
+
+// func SaveJobs(c *gin.Context) {
+//     studentIDStr, exist := c.Get("studentID")
+//     if !exist {
+//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+//         return
+//     }
+
+//     studentID, ok := studentIDStr.(uint)
+//     if !ok {
+//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+//         return
+//     }
+
+//     // Get the job ID from the request
+//     var savedJobSchema struct {
+//         JobID uint `json:"job_id" binding:"required"`
+//     }
+
+//     if err := c.ShouldBindJSON(&savedJobSchema); err != nil {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+//         return
+//     }
+
+//     // Begin a new transaction
+//     tx := config.DB.Begin()
+
+
+
+//     // Create the new job application
+//     savedJob := SaveJob{
+//         JobID:     savedJobSchema.JobID,
+//         StudentID: studentID,
+//     }
+
+//     if result := tx.Create(&savedJob); result.Error != nil {
+//         tx.Rollback()
+//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to  save  job", "details": result.Error.Error()})
+//         return
+//     }
+
+//     // Commit the transaction
+//     tx.Commit()
+        
+
+//     c.JSON(http.StatusOK, gin.H{"message":"The job has been saved successfully"})
+// }
+
+
+func ApplyorSaveJob(c *gin.Context){
+	studentIDStr, exists := c.Get("studentID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+
+	studentID, ok := studentIDStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
+	}
+
+
+	var jobActionSchema struct{
+		JobID  uint `json:"job_id" binding:"required"`
+        Action string  `json:"action" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&jobActionSchema); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"Failed to read request body"})
+	    return
+	}
+
+
+	tx := config.DB.Begin()
+
+	switch jobActionSchema.Action {
+	case  "apply":
+		var existingApplication JobApplication
+		if result := tx.Where("job_id = ? AND student_id = ?", jobActionSchema.JobID, studentID).First(&existingApplication); result.Error == nil{
+			tx.Rollback()
+			c.JSON(http.StatusConflict, gin.H{"error":"You have already applied for this job"})
+		     return  
+		}else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound){
+           tx.Rollback()
+		   c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error occure while checking for existing application"})
+		   return
+		}
+     
+		jobApplication := JobApplication{
+			JobID: jobActionSchema.JobID,
+			StudentID: studentID,
+		}
+
+		if result := tx.Create(&jobApplication); result.Error != nil {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error":"Failed to commit tranction", "details": result.Error.Error()})
+			return
+		}
+		
+		if err := tx.Commit().Error; err != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
+            return
+        }
+
+        c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
+
+	case "save":
+		var existingSave SaveJob
+       if result := tx.Where("job_id = ? AND student_id = ?", jobActionSchema.JobID, studentID).First(&existingSave); result.Error == nil {
+		  tx.Rollback()
+		  c.JSON(http.StatusConflict, gin.H{"error":"You have already save this job"})
+		  return
+	   }else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound){
+		 tx.Rollback()
+		 c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error occured while checking for existing saved job", "details": result.Error.Error()})
+		 return
+	   }
+
+        savedJob := SaveJob{
+			JobID: jobActionSchema.JobID,
+			StudentID: studentID,
+		}
+		
+		if result := tx.Create(&savedJob); result.Error  != nil {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error":"Failed  to save job", "detailes":result.Error.Error()})
+		     return
+		}
+		
+		if err := tx.Commit().Error; err != nil{
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to commit transaction", "details":err.Error()})
+		    return
+		}
+		c.JSON(http.StatusOK, gin.H{"message":"The job has been saved successfully"})
+	default:
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{"error":"Invalid action"})
+	}
+
 }

@@ -122,6 +122,9 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	jobgroup.GET("/get-job/:id", middleware.RequireAuth,  job.GetJobID)
 	jobgroup.GET("/get-latest-job", middleware.RequireAuth, job.GetLatestJobs)
 	jobgroup.GET("/search-job", middleware.RequireAuth, job.SearchJob)
-	jobgroup.POST("/applied", middleware.RequireStudent,  job.ApplyForJob)
-	r.Run(":8000")
+	jobgroup.POST("/save-apply", middleware.RequireStudent, job.ApplyorSaveJob)
+	// jobgroup.POST("/applied", middleware.RequireStudent,  job.ApplyForJob)
+	// jobgroup.POST("/save-job", middleware.RequireStudent, job.SaveJobs)
+	
+	r.Run(":8080")
 }
