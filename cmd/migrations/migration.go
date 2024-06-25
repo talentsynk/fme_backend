@@ -29,5 +29,8 @@ func main() {
 		&course.StcCourse{},
 		&employer.Employer{},
 		&job.Job{},
+		&job.JobApplication{},
+		&job.SaveJob{},
+
 	)
 }
