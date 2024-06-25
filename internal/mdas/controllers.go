@@ -1,6 +1,7 @@
 package mda
 
 import (
+	"encoding/csv"
 	"errors"
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -445,3 +447,54 @@ func GetMdaProfile(c *gin.Context) {
     
 }
 
+
+func DownloadMdaCsv(c *gin.Context) {
+    var mdas []GetAllMdaSchema
+
+    if result := config.DB.Table("mdas").
+    Select("mdas.id AS id, mdas.register_name AS name, mdas.address AS address, MAX(mdas.created_at) AS created_at, mdas.state_of_operation AS state_of_operation, users.is_active AS is_active, users.email AS email, users.id AS user_id, COUNT(DISTINCT stcs.id) AS stc_count, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT mda_courses.course_id) AS course_count").
+    Joins("JOIN users ON mdas.user_id = users.id").
+    Joins("LEFT JOIN stcs ON mdas.id = stcs.mda_id").
+    Joins("LEFT JOIN students ON mdas.id = students.mda_id").
+    Joins("LEFT JOIN mda_courses ON mdas.id = mda_courses.mda_id").
+    Group("mdas.id, mdas.register_name, mdas.address, users.is_active, users.id, mdas.state_of_operation"). // Include all non-aggregated columns in GROUP BY
+    Find(&mdas); result.Error != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+        return
+    }
+
+
+    csvData := [][]string{
+        {"ID", "StateOfOperation", "Name", "Address", "IsActive", "STCCount","StudentCount", "CreatedAt", "CourseCount", "Email"},
+    }
+
+    for _, mda := range mdas {
+        csvData = append(csvData, []string{
+            strconv.Itoa(int(mda.Id)),
+            mda.StateOfOperation,
+            mda.Name,
+            mda.Address,
+            strconv.FormatBool(mda.IsActive),
+            strconv.Itoa(int(mda.STCCount)),
+            strconv.Itoa(int(mda.StudentCount)),
+            mda.CreatedAt.String(),
+            strconv.Itoa(int(mda.CourseCount)),
+            mda.Email,
+
+            
+        })
+    }
+
+    c.Header("Content-Disposition", "attachment; filename=mdas.csv")
+    c.Header("Content-Type", "text/csv")
+
+    w := csv.NewWriter(c.Writer)
+    defer w.Flush()
+
+    for _, record := range csvData {
+        if err := w.Write(record); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"message": "error writing csv"})
+            return
+        }
+    }
+}

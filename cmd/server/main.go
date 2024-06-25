@@ -56,7 +56,7 @@ func main() {
   mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
 	mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
   mdagroup.GET("/profile",middleware.RequireMda,mda.GetMdaProfile)
-
+mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 
     
    stcgroup := r.Group("/stc")
@@ -91,6 +91,7 @@ func main() {
 	studentgroup.GET("/all",middleware.RequireAuth,student.GetAllStudents)
 	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
 	studentgroup.GET("/total-info",middleware.RequireAuth,student.GetTotalStudentInfo)
+	studentgroup.GET("/download-csv",middleware.RequireAuth,student.DownloadStudentsCsv)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create", middleware.RequireFme, course.CreateCategory)

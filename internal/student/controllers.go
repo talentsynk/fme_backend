@@ -1415,5 +1415,205 @@ func CreateStcStudentFromCsv(c *gin.Context) {
 
 
 
+func DownloadStudentsCsv(c *gin.Context) {
+    // get active filter
+    activestr := c.Query("active")
 
+    // Get userID
+    userIDstr, exists := c.Get("userID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user"})
+        return
+    }
+
+    userID, ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get User Role
+    userRoleStr, exists := c.Get("userRole")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user role"})
+        return
+    }
+
+    userRole, ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint role"})
+        return
+    }
+
+    // Make DB queries
+    var students []GetAllStudentSchema
+    switch userRole {
+    case 1:
+        query := config.DB.Table("students").
+            Select("students.id AS id, students.gender AS gender, students.address AS address, MAX(students.created_at) AS created_at, students.firstname AS first_name, students.phone_number AS phone_number, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
+            Joins("JOIN users ON students.user_id = users.id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
+            Group("students.id, students.phone_number, students.firstname, students.lastname, students.state_of_residence, students.gender, students.address, users.is_active, users.id, users.email")
+            
+
+        // Add active filter:
+        if activestr != "" {
+            var isActiveCondition string
+            if activestr == "true" {
+                isActiveCondition = "users.is_active = true"
+            } else if activestr == "false" {
+                isActiveCondition = "users.is_active = false"
+            } else {
+                c.JSON(http.StatusBadRequest, gin.H{"message": "incorrect active filter"})
+                return
+            }
+            query = query.Where(isActiveCondition)
+        }
+
+        err := query.Scan(&students).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "error retrieving students",
+            })
+            return
+        }
+
+    case 2:
+        // get mdaid
+        var userMdaId uint
+        err := config.DB.Table("mdas").
+            Where("user_id = ?", userID).
+            Pluck("id", &userMdaId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        // add filter for the mdaId and related stc
+        query := config.DB.Table("students").
+            Select("students.id AS id, students.gender AS gender, students.address AS address, MAX(students.created_at) AS created_at, students.firstname AS first_name, students.phone_number AS phone_number, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
+            Joins("JOIN users ON students.user_id = users.id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
+            Joins("LEFT JOIN stcs ON students.stc_id = stcs.id"). // Joining stc table
+            Group("students.id, students.phone_number, students.firstname, students.lastname, students.state_of_residence, students.gender, students.address, users.is_active, users.id, users.email")
+            
+
+        // Add active filter:
+        if activestr != "" {
+            var isActiveCondition string
+            if activestr == "true" {
+                isActiveCondition = "users.is_active = true"
+            } else if activestr == "false" {
+                isActiveCondition = "users.is_active = false"
+            } else {
+                c.JSON(http.StatusBadRequest, gin.H{"message": "incorrect active filter"})
+                return
+            }
+            query = query.Where(isActiveCondition)
+        }
+
+        // Add condition for mdaid
+        query = query.Where("students.mda_id = ? OR stcs.mda_id = ?", userMdaId, userMdaId)
+
+        nerr := query.Scan(&students).Error
+        if nerr != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "error retrieving students",
+            })
+            return
+        }
+
+    case 3:
+        // get user stcid
+        var userStcId uint
+        err := config.DB.
+            Table("stcs").
+            Select("id").
+            Where("user_id = ?", userID).
+            Scan(&userStcId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "Error with authorization",
+            })
+            return
+        }
+
+        query := config.DB.Table("students").
+            Select("students.id AS id, students.gender AS gender, students.address AS address, MAX(students.created_at) AS created_at, students.firstname AS first_name, students.phone_number AS phone_number, students.state_of_residence AS state_of_residence, students.lastname AS last_name, users.is_active AS is_active, users.id AS user_id, users.email AS email, STRING_AGG(courses.name, ', ') AS courses_taken").
+            Joins("JOIN users ON students.user_id = users.id").
+            Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+            Joins("LEFT JOIN courses ON student_courses.course_id = courses.id").
+            Group("students.id, students.phone_number, students.firstname, students.lastname, students.state_of_residence, students.gender, students.address, users.is_active, users.id, users.email")
+            
+
+        // Add active filter:
+        if activestr != "" {
+            var isActiveCondition string
+            if activestr == "true" {
+                isActiveCondition = "users.is_active = true"
+            } else if activestr == "false" {
+                isActiveCondition = "users.is_active = false"
+            } else {
+                c.JSON(http.StatusBadRequest, gin.H{"message": "incorrect active filter"})
+                return
+            }
+            query = query.Where(isActiveCondition)
+        }
+
+        // Add condition for stcid
+        query = query.Where("students.stc_id = ?", userStcId)
+
+        nerr := query.Scan(&students).Error
+        if nerr != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "error retrieving students",
+            })
+            return
+        }
+
+    default:
+        fmt.Println(userID)
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "default unauthorized user"})
+        return
+    }
+
+    // Generate CSV
+    csvData := [][]string{
+        {"ID", "Gender", "Address", "Created At", "First Name", "Phone Number", "State of Residence", "Last Name", "Is Active", "User ID", "Email", "Courses Taken"},
+    }
+
+    for _, student := range students {
+        csvData = append(csvData, []string{
+            strconv.Itoa(int(student.ID)),
+            student.Gender,
+            student.Address,
+            student.CreatedAt.String(),
+            student.FirstName,
+            student.PhoneNumber,
+            student.StateOfResidence,
+            student.LastName,
+            strconv.FormatBool(student.IsActive),
+            strconv.Itoa(int(student.UserID)),
+            student.Email,
+            student.CoursesTaken,
+        })
+    }
+
+    c.Header("Content-Disposition", "attachment; filename=students.csv")
+    c.Header("Content-Type", "text/csv")
+
+    w := csv.NewWriter(c.Writer)
+    defer w.Flush()
+
+    for _, record := range csvData {
+        if err := w.Write(record); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"message": "error writing csv"})
+            return
+        }
+    }
+}
 
