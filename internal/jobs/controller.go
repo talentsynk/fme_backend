@@ -625,79 +625,131 @@ func GetAppliedJobs(c *gin.Context){
 	c.JSON(http.StatusOK, gin.H{"applied_jobs":appliedJobs})
 }
 
-// func GetJobStat(c *gin.Context){
-// 	var totalAppliedJobs int64
-// 	var totalJobRecommendation int64
-// 	var totalCompletedJobs int64
+func GetJobStat(c *gin.Context){
+	var totalAppliedJobs int64
+	var totalJobRecommendation int64
+	var totalCompletedJobs int64
 
-//    // Count the total number of jobs applied for
-// 	if result := config.DB.Table("job_applications").Count(&totalAppliedJobs); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 	    return
-// 	}
-
-
-// 	 // Count the total number of job recommendations
-// 	if result := config.DB.Table("job_recommendations").Count(&totalJobRecommendation); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 	    return
-// 	}
-
-// 	 // Count the total number of completed jobs (assuming 'completed' is a status in 'jobs' table)
-// 	if result := config.DB.Table("jobs").Where("status= ?", "completed").Count(&totalCompletedJobs); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 	    return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"total_applied_jobs":totalAppliedJobs,
-// 		"total_job_recommendations":totalJobRecommendation,
-// 		"total_completed_jobs":totalCompletedJobs,
-// 	})
+   // Count the total number of jobs applied for
+	if result := config.DB.Table("job_applications").Count(&totalAppliedJobs); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+	    return
+	}
 
 
-// }
+	 // Count the total number of job recommendations
+	if result := config.DB.Table("job_recommendations").Count(&totalJobRecommendation); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+	    return
+	}
 
-// func GetStudentJobStat(c *gin.Context) {
-// 	// Retrieve studentID from Gin context (assuming it's set by authentication middleware)
-// 	studentID, exists := c.Get("studentID")
-// 	if !exists {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-// 		return
-// 	}
+	if result := config.DB.Table("completed_jobs").Count(&totalCompletedJobs); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		return
+	}
 
-// 	// Convert studentID to uint type
-// 	studentIDUint, ok := studentID.(uint)
-// 	if !ok {
-// 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-// 		return
-// 	}
 
-// 	var totalAppliedJobs int64
-// 	var totalJobRecommendation int64
-// 	var totalCompletedJobs int64
+	c.JSON(http.StatusOK, gin.H{
+		"total_applied_jobs":totalAppliedJobs,
+		"total_job_recommendations":totalJobRecommendation,
+		"total_completed_jobs":totalCompletedJobs,
+	})
 
-// 	// Count the total number of jobs applied for by the student
-// 	if result := config.DB.Table("job_applications").Where("job_applications.student_id = ?", studentIDUint).Count(&totalAppliedJobs); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 		return
-// 	}
 
-// 	// Count the total number of job recommendations for the student
-// 	if result := config.DB.Table("job_recommendations").Where("job_recommendations.student_id = ?", studentIDUint).Count(&totalJobRecommendation); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 		return
-// 	}
+}
+func GetStudentJobStat(c *gin.Context) {
+	studentIDStr, exists := c.Get("studentID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+		return
+	}
 
-// 	// Count the total number of completed jobs for the student
-// 	if result := config.DB.Table("jobs").Where("student_id = ? AND status = ?", studentIDUint, "completed").Count(&totalCompletedJobs); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 		return
-// 	}
+	studentID, ok := studentIDStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"total_applied_jobs":        totalAppliedJobs,
-// 		"total_job_recommendations": totalJobRecommendation,
-// 		"total_completed_jobs":      totalCompletedJobs,
-// 	})
-// }
+	var totalAppliedJobs int64
+	var totalJobRecommendation int64
+	var totalCompletedJobs int64
+
+	// Count the total number of jobs applied for by the student
+	if result := config.DB.Table("job_applications").Where("student_id = ?", studentID).Count(&totalAppliedJobs); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		return
+	}
+
+	// Count the total number of job recommendations for the student
+	if result := config.DB.Table("job_recommendations").Where(" job_recommendations.student_id = ?", studentID).Count(&totalJobRecommendation); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		return
+	}
+
+	// Count the total number of completed jobs for the student
+	if result := config.DB.Table("completed_jobs").Where("completed_jobs.student_id = ?", studentID).Count(&totalCompletedJobs); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		return
+	}
+
+
+	c.JSON(http.StatusOK, gin.H{
+		"student_id":                studentID,
+		"total_applied_jobs":        totalAppliedJobs,
+		"total_job_recommendations": totalJobRecommendation,
+		"total_completed_jobs":      totalCompletedJobs,
+	})
+}
+
+
+func GetSavedJobs(c *gin.Context){
+	studentIDStr, exists := c.Get("studentID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "problem with the authorization token"})
+	     return
+	}
+
+	studentID, ok := studentIDStr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+        return
+	}
+
+	var savedJobs []Job
+	if err := config.DB.Joins("JOIN save_jobs ON jobs.id = save_jobs.job_id").
+        Where("save_jobs.student_id = ?", studentID).Find(&savedJobs).Error; err != nil{
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error", "details":err.Error()})
+			return 
+		}
+		c.JSON(http.StatusOK, gin.H{"saved_jobs":savedJobs})
+  }
+
+
+
+
+  func GetAllSavedJobs(c *gin.Context){
+	var savedJobs []struct {
+		JobID             uint   `json:"job_id"`
+		FirstName         string 
+		LastName          string 
+		Location          string
+		Description       string 
+		JobType           string  
+		JobTitle          string 
+		Requirement       string
+		Responsibilities  string
+        StudentID         uint   `json:"student_id"`
+        AppliedAt         time.Time `json:"applied_at"` 
+		EmployerID        uint  
+	}
+
+	if err := config.DB.Table("jobs").
+	 Select("jobs.id as job_id, jobs.job_title, jobs.location, jobs.description, jobs.job_type, jobs.requirement, jobs.responsibilities,employers.first_name AS first_name, employers.last_name AS last_name, employers.id AS employer_id,save_jobs.student_id, save_jobs.created_at as saved_at").
+     Joins("JOIN save_jobs ON jobs.id = save_jobs.job_id"). 
+	 Joins("JOIN employers ON jobs.employer_id = employers.id"). 
+     Find(&savedJobs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+        return
+	}
+	c.JSON(http.StatusOK, gin.H{"save_jobs":savedJobs})
+}
