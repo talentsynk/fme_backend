@@ -4,16 +4,18 @@ import (
 	"fme_backend/internal/config"
 	"fme_backend/internal/course"
 	"fme_backend/internal/dashboard"
+	employer "fme_backend/internal/employers"
+	"fme_backend/internal/jobs"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
 	stc "fme_backend/internal/stc"
 	"fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
-	employer "fme_backend/internal/employers"
 
-     job "fme_backend/internal/jobs"
+	job "fme_backend/internal/jobs"
 	"time"
-    "github.com/gin-contrib/cors"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -123,6 +125,11 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	jobgroup.GET("/get-latest-job", middleware.RequireAuth, job.GetLatestJobs)
 	jobgroup.GET("/search-job", middleware.RequireAuth, job.SearchJob)
 	jobgroup.POST("/save-apply", middleware.RequireStudent, job.ApplyorSaveJob)
+	jobgroup.GET("/jobs/:jobType", middleware.RequireAuth, job.GetJobType)
+	jobgroup.GET("/applied-jobs", middleware.RequireStudent, job.GetAppliedJobs)
+	jobgroup.GET("/get-all-applied-jobs", middleware.RequireAuth, jobs.GetAllAppliedJobs)
+	// jobgroup.GET("/get-student-stats", middleware.RequireStudent, job.GetStudentJobStat)
+
 	// jobgroup.POST("/applied", middleware.RequireStudent,  job.ApplyForJob)
 	// jobgroup.POST("/save-job", middleware.RequireStudent, job.SaveJobs)
 	
