@@ -17,7 +17,7 @@ type Job  struct {
 	Responsibilities  string   `gorm:"not null"`
 	Status            bool     `gorm:"not null"`
 	EmployerID        uint
-
+    
 }
 
 type JobApplication struct {

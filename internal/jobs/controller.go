@@ -7,9 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-     "gorm.io/gorm"
 	"github.com/gin-gonic/gin"
-	
+	"gorm.io/gorm"
 )
 
 func CreateJob(c *gin.Context) {
@@ -51,6 +50,7 @@ func CreateJob(c *gin.Context) {
 		Requirement: CreateJobSchema.Requirement,
 		Responsibilities: CreateJobSchema.Responsibilities,
 		EmployerID:  employerID,
+		Status: true,
 	}
 
 	// Assuming 'tx' is a valid gorm.DB transaction object available in the context
@@ -64,7 +64,7 @@ func CreateJob(c *gin.Context) {
 			return
 		 }
 		 tx.Commit()
-	c.JSON(http.StatusOK, gin.H{
+	     c.JSON(http.StatusOK, gin.H{
 		"message": "Job created successfully",
 	})
 }
@@ -90,6 +90,14 @@ func GetAllJobs(c *gin.Context){
 	   offset := (page - 1) * limit 
 
 	  var jobs []GetAllJobsSchema
+	  var total int64
+
+	// Get the total number of jobs
+	if result := config.DB.Table("jobs").
+		Count(&total); result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+		return
+	}
 
 	 if   result := config.DB.Table("jobs").
 	    Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name As last_name").
@@ -101,7 +109,7 @@ func GetAllJobs(c *gin.Context){
 		      return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"jobs": jobs})
+		c.JSON(http.StatusOK, gin.H{"total":total, "jobs": jobs})
 }
 
 func GetJobID(c *gin.Context){
@@ -177,21 +185,132 @@ func GetLatestJobs(c *gin.Context){
 
 }
 
-func GetAllAppliedJobs(c *gin.Context){
+func GetJobType(c *gin.Context){
+	jobType := c.Param("jobType")
 
+    limitStr  :=  c.Query("limit")
+	pageStr :=  c.Query("page")
+
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 18
+	}
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil  || page <= 0{
+		page = 1
+	}
+
+	offset := (page - 1) * limit
+	var total int64
+
+	if result := config.DB.Table("jobs").
+	Where("jobs.job_type = ?", jobType).
+	Count(&total); result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+		return
+	}
+
+	var jobs []GetAllJobsSchema
+    if result := config.DB.Table("jobs").
+	Select("jobs.id AS id, obs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+	Joins("JOIN employers ON jobs.employer_id = employers.id").
+	Where("jobs.job_type = ?", jobType).
+	Limit(limit).
+	Offset(offset).
+	Find(&jobs); result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total":total,
+		"jobs":jobs,
+	})
 }
 
-func GetAllSavedJobs(c *gin.Context){
 
-}
+// func GetAllOnhireJobs(c *gin.Context){
+//       limitStr := c.Query("limit")
+// 	  pageStr := c.Query("page")
 
-func GetAllShorttermJobs(c *gin.Context){
+// 	  limit, err := strconv.Atoi(limitStr)
+// 	  if err != nil || limit <= 0 {
+// 		limit = 18
+// 	  }
 
-}
+// 	  page, err := strconv.Atoi(pageStr)
+// 	  if err != nil || page <= 0 {
+// 		page = 1
+// 	  }
 
-func GetAllFulltimeJobs(c *gin.Context){
+// 	  offset := (page - 1) * limit 
+// 	  var total int64
 
-}
+// 	  if result := config.DB.Table("jobs").
+// 	  Where("jobs.job_type =  ?", "on-hire").
+// 	  Count(&total); result.Error != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error":result.Error.Error()})
+// 	     return 
+// 	}
+
+// 	  var jobs []GetAllJobsSchema
+// 	  if result := config.DB.Table("jobs").
+// 	  Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+// 	  Joins("JOIN employers ON jobs.employer_id = employers.id").
+// 	  Where("jobs.jo_type = ?", "on-hire").
+// 	  Limit(limit).
+// 	  Offset(offset).
+// 	  Find(&jobs); result.Error != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+// 		return
+// 	  }
+
+// 	  c.JSON(http.StatusOK, gin.H{ 
+// 		"total":total, 
+// 		"jobs":jobs})
+// }
+
+
+// func GetAllContractJobs(c *gin.Context){
+// 	limitStr := c.Query("limit")
+// 	pageStr := c.Query("page")
+
+// 	limit, err := strconv.Atoi(limitStr)
+// 	if err != nil || limit <= 0 {
+// 	  limit = 18
+// 	}
+
+// 	page, err := strconv.Atoi(pageStr)
+// 	if err != nil || page <= 0 {
+// 	  page = 1
+// 	}
+
+// 	offset := (page - 1) * limit 
+
+// 	var jobs []GetAllJobsSchema
+// 	var total int64
+
+// 	  if result := config.DB.Table("jobs").
+// 	  Where("jobs.job_type =  ?", "contract job").
+// 	  Count(&total); result.Error != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error":result.Error.Error()})
+// 	     return 
+// 	}
+// 	if result := config.DB.Table("jobs").
+// 	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+// 	Joins("JOIN employers ON jobs.employer_id = employers.id").
+// 	Where("jobs.jo_type = ?", "contract job").
+// 	Limit(limit).
+// 	Offset(offset).
+// 	Find(&jobs); result.Error != nil {
+// 	  c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+// 	  return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{"total":total,"jobs":jobs})
+// }
 
 
 func SearchJob(c *gin.Context){
@@ -452,3 +571,133 @@ func ApplyorSaveJob(c *gin.Context){
 	}
 
 }
+
+
+func GetAppliedJobs(c *gin.Context){
+	studentIDStr, exists := c.Get("studentID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "problem with the authorization token"})
+	     return
+	}
+
+	studentID, ok := studentIDStr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+        return
+	}
+
+	var appliedJobs []Job
+	if err := config.DB.Joins("JOIN job_applications ON jobs.id = job_applications.job_id").
+        Where("job_applications.student_id = ?", studentID).Find(&appliedJobs).Error; err != nil{
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error", "details":err.Error()})
+			return 
+		}
+		c.JSON(http.StatusOK, gin.H{"applied_jobs":appliedJobs})
+  }
+
+
+
+
+  func GetAllAppliedJobs(c *gin.Context){
+	var appliedJobs []struct {
+		JobID     uint   `json:"job_id"`
+		FirstName        string 
+		LastName         string 
+		Location         string
+		Description      string 
+		JobType          string  
+		JobTitle         string 
+		Requirement      string
+		Responsibilities string
+        StudentID uint   `json:"student_id"`
+        AppliedAt time.Time `json:"applied_at"` 
+		EmployerID        uint  
+	}
+
+	if err := config.DB.Table("jobs").
+	 Select("jobs.id as job_id, jobs.job_title, jobs.location, jobs.description, jobs.job_type, jobs.requirement, jobs.responsibilities,employers.first_name AS first_name, employers.last_name AS last_name, employers.id AS employer_id,job_applications.student_id, job_applications.created_at as applied_at").
+     Joins("JOIN job_applications ON jobs.id = job_applications.job_id"). 
+	 Joins("JOIN employers ON jobs.employer_id = employers.id"). 
+     Find(&appliedJobs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+        return
+	}
+	c.JSON(http.StatusOK, gin.H{"applied_jobs":appliedJobs})
+}
+
+// func GetJobStat(c *gin.Context){
+// 	var totalAppliedJobs int64
+// 	var totalJobRecommendation int64
+// 	var totalCompletedJobs int64
+
+//    // Count the total number of jobs applied for
+// 	if result := config.DB.Table("job_applications").Count(&totalAppliedJobs); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 	    return
+// 	}
+
+
+// 	 // Count the total number of job recommendations
+// 	if result := config.DB.Table("job_recommendations").Count(&totalJobRecommendation); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 	    return
+// 	}
+
+// 	 // Count the total number of completed jobs (assuming 'completed' is a status in 'jobs' table)
+// 	if result := config.DB.Table("jobs").Where("status= ?", "completed").Count(&totalCompletedJobs); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 	    return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"total_applied_jobs":totalAppliedJobs,
+// 		"total_job_recommendations":totalJobRecommendation,
+// 		"total_completed_jobs":totalCompletedJobs,
+// 	})
+
+
+// }
+
+// func GetStudentJobStat(c *gin.Context) {
+// 	// Retrieve studentID from Gin context (assuming it's set by authentication middleware)
+// 	studentID, exists := c.Get("studentID")
+// 	if !exists {
+// 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+// 		return
+// 	}
+
+// 	// Convert studentID to uint type
+// 	studentIDUint, ok := studentID.(uint)
+// 	if !ok {
+// 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+// 		return
+// 	}
+
+// 	var totalAppliedJobs int64
+// 	var totalJobRecommendation int64
+// 	var totalCompletedJobs int64
+
+// 	// Count the total number of jobs applied for by the student
+// 	if result := config.DB.Table("job_applications").Where("job_applications.student_id = ?", studentIDUint).Count(&totalAppliedJobs); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 		return
+// 	}
+
+// 	// Count the total number of job recommendations for the student
+// 	if result := config.DB.Table("job_recommendations").Where("job_recommendations.student_id = ?", studentIDUint).Count(&totalJobRecommendation); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 		return
+// 	}
+
+// 	// Count the total number of completed jobs for the student
+// 	if result := config.DB.Table("jobs").Where("student_id = ? AND status = ?", studentIDUint, "completed").Count(&totalCompletedJobs); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"total_applied_jobs":        totalAppliedJobs,
+// 		"total_job_recommendations": totalJobRecommendation,
+// 		"total_completed_jobs":      totalCompletedJobs,
+// 	})
+// }

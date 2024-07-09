@@ -600,7 +600,7 @@ func Login(c *gin.Context) {
 	})
 
 	fmt.Println("Stored Password: ", user.Password)
-fmt.Println("Input Password: ", LoginSchema.Password)
+    fmt.Println("Input Password: ", LoginSchema.Password)
 }
 
 // Request Otp 
@@ -840,38 +840,66 @@ func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint)
   }
 
 
-  func  CreateEmployerUser(tx *gorm.DB, email, password string )(bool, string, uint){
-	var userCheck User
-	tx.Where("email=?", email).First(&userCheck)
-	if userCheck.ID != 0 {
-		return false, "user already exist", 0
-	}
+//   func  CreateEmployerUser(tx *gorm.DB, email, password string )(bool, string, uint){
+// 	var userCheck User
+// 	tx.Where("email=?", email).First(&userCheck)
+// 	if userCheck.ID != 0 {
+// 		return false, "user already exist", 0
+// 	}
 
-	// hash the password 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	if err != nil {
-		return false, "Unable to hash password", 0
-	}
-
-
-	  user := User{
-		Email: email,
-		Password: string(hash),
-		OTPExpiresAt: time.Now(),
-		Role: 5,
-		IsActive: true,
-	  }
+// 	// hash the password 
+// 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+// 	if err != nil {
+// 		return false, "Unable to hash password", 0
+// 	}
 
 
-	  result := tx.Create(&user)
-	  if result.Error != nil {
-		return false, "failed to create user", 0
-	  }
-
-	  return true, "user created successfully", user.ID
-
-  }
-
+// 	  user := User{
+// 		Email: email,
+// 		Password: string(hash),
+// 		OTPExpiresAt: time.Now(),
+// 		Role: 5,
+// 		IsActive: true,
+// 	  }
 
 
+// 	  result := tx.Create(&user)
+// 	  if result.Error != nil {
+// 		return false, "failed to create user", 0
+// 	  }
 
+// 	  return true, "user created successfully", user.ID
+
+//   }
+
+
+
+
+func CreateEmployerUser(tx *gorm.DB, email, password string) (bool, string, uint) {
+    var userCheck User
+    tx.Where("email = ?", email).First(&userCheck)
+    if userCheck.ID != 0 {
+        return false, "user already exists", 0
+    }
+
+    // Hash the password
+    hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+    if err != nil {
+        return false, "Unable to hash password", 0
+    }
+
+    user := User{
+        Email:        email,
+        Password:     string(hash),
+        OTPExpiresAt: time.Now(),
+        Role:         5,
+        IsActive:     true,
+    }
+
+    result := tx.Create(&user)
+    if result.Error != nil {
+        return false, "failed to create user", 0
+    }
+
+    return true, "user created successfully", user.ID
+}
