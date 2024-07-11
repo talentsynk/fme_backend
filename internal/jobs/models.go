@@ -40,6 +40,7 @@ type JobRecommendation struct {
 }
 
 type CompletedJobs struct{
-	gorm.Model
-	JobID      uint   `gorm:"not null"`
+	 gorm.Model
+	 StudentID      uint   `gorm:"not null"`
+	 RecommendationText   string   `gorm:"type:varchar(255);not null"`
 }
