@@ -214,7 +214,7 @@ func GetJobType(c *gin.Context){
 
 	var jobs []GetAllJobsSchema
     if result := config.DB.Table("jobs").
-	Select("jobs.id AS id, obs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
 	Joins("JOIN employers ON jobs.employer_id = employers.id").
 	Where("jobs.job_type = ?", jobType).
 	Limit(limit).
