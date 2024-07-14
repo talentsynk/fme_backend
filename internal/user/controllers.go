@@ -883,14 +883,10 @@ func CreateEmployerUser(tx *gorm.DB, email, password string) (bool, string, uint
     }
 
     // Hash the password
-    hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-    if err != nil {
-        return false, "Unable to hash password", 0
-    }
-
+ 
     user := User{
         Email:        email,
-        Password:     string(hash),
+        Password:     password,
         OTPExpiresAt: time.Now(),
         Role:         5,
         IsActive:     true,
