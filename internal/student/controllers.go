@@ -1667,6 +1667,7 @@ func GraduateStudent(c *gin.Context) {
 
     switch userRole {
     case 1:
+        // get the student instance
         err := config.DB.First(&instance, id).Error
         if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -1674,7 +1675,7 @@ func GraduateStudent(c *gin.Context) {
 			})
 			return
 		}
-
+        // verify if the student is an fme student 
         if !instance.Fmestudent {
             c.JSON(http.StatusUnauthorized, gin.H{
 				"message": "Cannot perfom this operation on this student",
@@ -1682,9 +1683,29 @@ func GraduateStudent(c *gin.Context) {
 			return
         }
 
+        // set the graduation status to true
         instance.GraduationStatus = true
 
         err = config.DB.Save(&instance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        // set the user role to artisan
+        var userinstance myuser.User
+        err = config.DB.First(&userinstance, instance.UserID).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Student Id invalid",
+			})
+			return
+		}
+        userinstance.Role = 6
+
+        err = config.DB.Save(&userinstance).Error
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{
                 "message": "Unable to update the user record",
@@ -1749,6 +1770,24 @@ func GraduateStudent(c *gin.Context) {
             })
             return
         }
+         // set the user role to artisan
+         var userinstance myuser.User
+         err = config.DB.First(&userinstance, instance.UserID).Error
+         if err != nil {
+             c.JSON(http.StatusBadRequest, gin.H{
+                 "message": "Student Id invalid",
+             })
+             return
+         }
+         userinstance.Role = 6
+ 
+         err = config.DB.Save(&userinstance).Error
+         if err != nil {
+             c.JSON(http.StatusInternalServerError, gin.H{
+                 "message": "Unable to update the user record",
+             })
+             return
+         }
 
         // create and save the artisan
         artisans := artisans.Artisans{
@@ -1810,6 +1849,25 @@ func GraduateStudent(c *gin.Context) {
             })
             return
         }
+
+         // set the user role to artisan
+         var userinstance myuser.User
+         err = config.DB.First(&userinstance, instance.UserID).Error
+         if err != nil {
+             c.JSON(http.StatusBadRequest, gin.H{
+                 "message": "Student Id invalid",
+             })
+             return
+         }
+         userinstance.Role = 6
+ 
+         err = config.DB.Save(&userinstance).Error
+         if err != nil {
+             c.JSON(http.StatusInternalServerError, gin.H{
+                 "message": "Unable to update the user record",
+             })
+             return
+         }
 
         // create and save the artisan
         artisans := artisans.Artisans{
