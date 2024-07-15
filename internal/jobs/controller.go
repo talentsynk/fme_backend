@@ -9,6 +9,7 @@ import (
 	"time"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"fme_backend/internal/utilities"
 )
 
 func CreateJob(c *gin.Context) {
@@ -31,20 +32,27 @@ func CreateJob(c *gin.Context) {
 		return
 	}
 
-
 	if err := c.BindJSON(&CreateJobSchema); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to read request body",
 		})
 		return
 	}
+
+   typeOfJobs, result := utilities.ValidateJobType(CreateJobSchema.JobType)
+   if !result {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error":"Incorrect job type",
+	})
+  } 
+
 	tx := config.DB.Begin() 
 
 	job := Job{
 		JobTitle:    CreateJobSchema.JobTitle,
 		Location:    CreateJobSchema.Location,
 		Budget:       CreateJobSchema.Budget,
-		JobType:       CreateJobSchema.JobType,
+		JobType:       typeOfJobs,
 		Category:     CreateJobSchema.Category,
 		Description:  CreateJobSchema.Description,
 		Requirement: CreateJobSchema.Requirement,
@@ -214,7 +222,7 @@ func GetJobType(c *gin.Context){
 
 	var jobs []GetAllJobsSchema
     if result := config.DB.Table("jobs").
-	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
+	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type,jobs.responsibilities, jobs.requirement, jobs.job_title, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
 	Joins("JOIN employers ON jobs.employer_id = employers.id").
 	Where("jobs.job_type = ?", jobType).
 	Limit(limit).
@@ -231,86 +239,9 @@ func GetJobType(c *gin.Context){
 }
 
 
-// func GetAllOnhireJobs(c *gin.Context){
-//       limitStr := c.Query("limit")
-// 	  pageStr := c.Query("page")
-
-// 	  limit, err := strconv.Atoi(limitStr)
-// 	  if err != nil || limit <= 0 {
-// 		limit = 18
-// 	  }
-
-// 	  page, err := strconv.Atoi(pageStr)
-// 	  if err != nil || page <= 0 {
-// 		page = 1
-// 	  }
-
-// 	  offset := (page - 1) * limit 
-// 	  var total int64
-
-// 	  if result := config.DB.Table("jobs").
-// 	  Where("jobs.job_type =  ?", "on-hire").
-// 	  Count(&total); result.Error != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error":result.Error.Error()})
-// 	     return 
-// 	}
-
-// 	  var jobs []GetAllJobsSchema
-// 	  if result := config.DB.Table("jobs").
-// 	  Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-// 	  Joins("JOIN employers ON jobs.employer_id = employers.id").
-// 	  Where("jobs.jo_type = ?", "on-hire").
-// 	  Limit(limit).
-// 	  Offset(offset).
-// 	  Find(&jobs); result.Error != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-// 		return
-// 	  }
-
-// 	  c.JSON(http.StatusOK, gin.H{ 
-// 		"total":total, 
-// 		"jobs":jobs})
-// }
 
 
-// func GetAllContractJobs(c *gin.Context){
-// 	limitStr := c.Query("limit")
-// 	pageStr := c.Query("page")
 
-// 	limit, err := strconv.Atoi(limitStr)
-// 	if err != nil || limit <= 0 {
-// 	  limit = 18
-// 	}
-
-// 	page, err := strconv.Atoi(pageStr)
-// 	if err != nil || page <= 0 {
-// 	  page = 1
-// 	}
-
-// 	offset := (page - 1) * limit 
-
-// 	var jobs []GetAllJobsSchema
-// 	var total int64
-
-// 	  if result := config.DB.Table("jobs").
-// 	  Where("jobs.job_type =  ?", "contract job").
-// 	  Count(&total); result.Error != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error":result.Error.Error()})
-// 	     return 
-// 	}
-// 	if result := config.DB.Table("jobs").
-// 	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-// 	Joins("JOIN employers ON jobs.employer_id = employers.id").
-// 	Where("jobs.jo_type = ?", "contract job").
-// 	Limit(limit).
-// 	Offset(offset).
-// 	Find(&jobs); result.Error != nil {
-// 	  c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-// 	  return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"total":total,"jobs":jobs})
-// }
 
 
 func SearchJob(c *gin.Context){
@@ -338,143 +269,6 @@ func SearchJob(c *gin.Context){
 
 	c.JSON(http.StatusOK, jobsearch)
 }
-
-
-
-// func SearchJob(c *gin.Context) {
-// 	job_title := c.Query("job_title")
-	
-
-// 	var jobsearch []GetAllJobsSchema
-// 	if err := config.DB.Table("jobs").
-// 		Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-// 		Joins("JOIN employers ON jobs.employer_id = employers.id").
-// 		Where("jobs.job_title LIKE ?", "%"+job_title+"%").
-// 		Find(&jobsearch).Error; err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
-// 		return
-// 	}
-
-// 	if len(jobsearch) == 0 {
-// 		c.JSON(http.StatusOK, gin.H{"message": "No matching jobs found"})
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"jobs": jobsearch})
-// }
-
-
-
-// func ApplyForJob(c *gin.Context) {
-//     studentIDStr, exist := c.Get("studentID")
-//     if !exist {
-//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-//         return
-//     }
-
-//     studentID, ok := studentIDStr.(uint)
-//     if !ok {
-//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-//         return
-//     }
-
-//     // Get the job ID from the request
-//     var applyJobSchema struct {
-//         JobID uint `json:"job_id" binding:"required"`
-//     }
-
-//     if err := c.ShouldBindJSON(&applyJobSchema); err != nil {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-//         return
-//     }
-
-//     // Begin a new transaction
-//     tx := config.DB.Begin()
-
-//     // Check if the application already exists
-// 	var existingApplication JobApplication
-// 	if result := tx.Where("job_id = ? AND student_id = ?", applyJobSchema.JobID, studentID).First(&existingApplication); result.Error == nil {
-// 		tx.Rollback()
-// 		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this job"})
-// 		return
-// 	} else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-// 		tx.Rollback()
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error occurred while checking for existing application"})
-// 		return
-// 	}
-	
-
-//     // Create the new job application
-//     jobApplication := JobApplication{
-//         JobID:     applyJobSchema.JobID,
-//         StudentID: studentID,
-//     }
-
-//     if result := tx.Create(&jobApplication); result.Error != nil {
-//         tx.Rollback()
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to apply for the job", "details": result.Error.Error()})
-//         return
-//     }
-
-//     // Commit the transaction
-//     if err := tx.Commit().Error; err != nil {
-//         tx.Rollback()
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
-//         return
-//     }
-
-//     c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
-// }
-
-
-
-
-// func SaveJobs(c *gin.Context) {
-//     studentIDStr, exist := c.Get("studentID")
-//     if !exist {
-//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-//         return
-//     }
-
-//     studentID, ok := studentIDStr.(uint)
-//     if !ok {
-//         c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-//         return
-//     }
-
-//     // Get the job ID from the request
-//     var savedJobSchema struct {
-//         JobID uint `json:"job_id" binding:"required"`
-//     }
-
-//     if err := c.ShouldBindJSON(&savedJobSchema); err != nil {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-//         return
-//     }
-
-//     // Begin a new transaction
-//     tx := config.DB.Begin()
-
-
-
-//     // Create the new job application
-//     savedJob := SaveJob{
-//         JobID:     savedJobSchema.JobID,
-//         StudentID: studentID,
-//     }
-
-//     if result := tx.Create(&savedJob); result.Error != nil {
-//         tx.Rollback()
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to  save  job", "details": result.Error.Error()})
-//         return
-//     }
-
-//     // Commit the transaction
-//     tx.Commit()
-        
-
-//     c.JSON(http.StatusOK, gin.H{"message":"The job has been saved successfully"})
-// }
 
 
 func ApplyorSaveJob(c *gin.Context){
