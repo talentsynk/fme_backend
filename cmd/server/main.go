@@ -5,7 +5,6 @@ import (
 	"fme_backend/internal/course"
 	"fme_backend/internal/dashboard"
 	employer "fme_backend/internal/employers"
-	"fme_backend/internal/jobs"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
 	stc "fme_backend/internal/stc"
@@ -94,6 +93,7 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
 	studentgroup.GET("/total-info",middleware.RequireAuth,student.GetTotalStudentInfo)
 	studentgroup.GET("/download-csv",middleware.RequireAuth,student.DownloadStudentsCsv)
+	studentgroup.GET("/graduate-student/:id", middleware.RequireAuth, student.GraduateStudent)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create", middleware.RequireFme, course.CreateCategory)
@@ -127,7 +127,7 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	jobgroup.POST("/save-apply", middleware.RequireStudent, job.ApplyorSaveJob)
 	jobgroup.GET("/:jobType", middleware.RequireAuth, job.GetJobType)
 	jobgroup.GET("/applied-jobs", middleware.RequireStudent, job.GetAppliedJobs)
-	jobgroup.GET("/get-all-applied-jobs", middleware.RequireAuth, jobs.GetAllAppliedJobs)
+	jobgroup.GET("/get-all-applied-jobs", middleware.RequireAuth, job.GetAllAppliedJobs)
 	jobgroup.GET("/get-all-saved-jobs", middleware.RequireAuth, job.GetAllSavedJobs)
 	jobgroup.GET("/saved-jobs", middleware.RequireStudent, job.GetSavedJobs)
 	jobgroup.GET("/get-student-stats", middleware.RequireAuth, job.GetJobStat)
