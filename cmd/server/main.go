@@ -93,6 +93,7 @@ func main() {
 	studentgroup.GET("/:id",middleware.RequireAuth,student.GetStudent)
 	studentgroup.GET("/total-info",middleware.RequireAuth,student.GetTotalStudentInfo)
 	studentgroup.GET("/download-csv",middleware.RequireAuth,student.DownloadStudentsCsv)
+	studentgroup.GET("/graduate-student/:id", middleware.RequireAuth, student.GraduateStudent)
 
 	categorygroup := r.Group("category")
 	categorygroup.POST("/create", middleware.RequireFme, course.CreateCategory)

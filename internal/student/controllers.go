@@ -3,6 +3,7 @@ package student
 import (
 	"encoding/csv"
 	"errors"
+	"fme_backend/internal/artisans"
 	"fme_backend/internal/config"
 	"fme_backend/internal/course"
 	myuser "fme_backend/internal/user"
@@ -1617,3 +1618,224 @@ func DownloadStudentsCsv(c *gin.Context) {
     }
 }
 
+func GraduateStudent(c *gin.Context) {
+    idStr:= c.Param("id")
+		if idStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "path parameter not provided",
+			})
+			return
+		}
+
+    id, err := strconv.Atoi(idStr)
+
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "path parameter invalid",
+        })
+        return
+    }
+
+    // get the user id and then figure out the permission issues
+    // Get user ID
+    userIDstr,exists := c.Get("userID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get user Role
+    userRoleStr,exists := c.Get("userRole")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var instance Student
+
+    switch userRole {
+    case 1:
+        err := config.DB.First(&instance, id).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Student Id invalid",
+			})
+			return
+		}
+
+        if !instance.Fmestudent {
+            c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Cannot perfom this operation on this student",
+			})
+			return
+        }
+
+        instance.GraduationStatus = true
+
+        err = config.DB.Save(&instance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        // create and save the artisan
+        artisans := artisans.Artisans{
+            UserID: instance.UserID,
+            StudentID: instance.ID,
+
+        }
+
+        err = config.DB.Save(&artisans).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        } 
+
+
+        // send successfull response
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been successfully graduated",
+        })   
+        
+    case 2:  //for the mda user
+        var userMdaId uint 
+        err := config.DB.Table("mdas").
+        Where("user_id = ?", userID).
+        Pluck("id",&userMdaId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        err = config.DB.First(&instance, id).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Student Id invalid",
+			})
+			return
+		}
+
+        if userMdaId != instance.MdaID {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        instance.GraduationStatus = true
+
+        err = config.DB.Save(&instance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        // create and save the artisan
+        artisans := artisans.Artisans{
+            UserID: instance.UserID,
+            StudentID: instance.ID,
+
+        }
+
+        err = config.DB.Save(&artisans).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        } 
+
+
+        // send successfull response
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been successfully graduated",
+        })   
+
+    case 3:
+        //get user stcid
+		var userStcId uint
+		err := config.DB.
+				Table("stcs").
+				Select("id").
+				Where("user_id = ?", userID).
+				Scan(&userStcId).Error
+		if err != nil{
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Error trying to fetch data",
+			})
+			return
+		}   
+
+        err = config.DB.First(&instance, id).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Student Id invalid",
+			})
+			return
+		}
+
+        if userStcId != instance.StcID {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        instance.GraduationStatus = true
+
+        err = config.DB.Save(&instance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        }
+
+        // create and save the artisan
+        artisans := artisans.Artisans{
+            UserID: instance.UserID,
+            StudentID: instance.ID,
+
+        }
+
+        err = config.DB.Save(&artisans).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the user record",
+            })
+            return
+        } 
+
+        // send successfull response
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been successfully graduated",
+        })  
+
+    default:
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Cannot perform this operation on this student",
+        })  
+
+    }
+ 
+}
