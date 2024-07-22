@@ -33,6 +33,7 @@ func main() {
 		&job.SaveJob{},
 		&job.JobRecommendation{},
 		&job.CompletedJobs{},
+		&job.ArtisanEmployed{},
 
 	)
 }

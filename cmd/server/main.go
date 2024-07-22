@@ -5,7 +5,6 @@ import (
 	"fme_backend/internal/course"
 	"fme_backend/internal/dashboard"
 	employer "fme_backend/internal/employers"
-	"fme_backend/internal/jobs"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
 	stc "fme_backend/internal/stc"
@@ -52,16 +51,16 @@ func main() {
 	mdagroup.PATCH("/update-mda/:id", middleware.RequireAuth, mda.UpdateMda)
 	mdagroup.GET("/get-mda/:id", middleware.RequireAuth, mda.GetMdaByID)
 	mdagroup.GET("/total-mda", middleware.RequireAuth, mda.MdaTotal)
-  mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
-  mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
+    mdagroup.GET("/get-ascending-mda", middleware.RequireAuth, mda.FilterMdaAscending)
+    mdagroup.GET("/get-descending-mda", middleware.RequireAuth, mda.FilterMdaDescending)
 	mdagroup.GET("/filter-by-state",middleware.RequireAuth, mda.FilterMdaByState )
-  mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
-	mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
-  mdagroup.GET("/profile",middleware.RequireMda,mda.GetMdaProfile)
-mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
+    mdagroup.POST("/suspend-mda/:id", middleware.RequireAuth, mda.SuspendMda)
+    mdagroup.POST("/activate-mda/:id",middleware.RequireAuth, mda.ActivateMda)
+    mdagroup.GET("/profile",middleware.RequireMda,mda.GetMdaProfile)
+    mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 
     
-   stcgroup := r.Group("/stc")
+     stcgroup := r.Group("/stc")
 	 stcgroup.POST("/create-stc",middleware.RequireFme, stc.CreateFmeStc)
 	 stcgroup.POST("/create-mda-stc", middleware.RequireMda, stc.CreateMdaStc)
 	 stcgroup.GET("/get-all-stc", middleware.RequireAuth, stc.GetStc)
@@ -69,18 +68,18 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	 stcgroup.PATCH("/update-stc/:id", middleware.RequireAuth, stc.UpdateStc)
 	 stcgroup.GET("/get-stc/:id", middleware.RequireAuth, stc.GetStcByID)
 	 stcgroup.GET("/get-total-count", middleware.RequireAuth,stc.StcTotal)	
-   stcgroup.GET("/get-ascending-stc", middleware.RequireAuth, stc.FilterStcAscending)
-   stcgroup.GET("/get-descending-stc", middleware.RequireAuth, stc.FilterStcDescending)
+     stcgroup.GET("/get-ascending-stc", middleware.RequireAuth, stc.FilterStcAscending)
+     stcgroup.GET("/get-descending-stc", middleware.RequireAuth, stc.FilterStcDescending)
 	 stcgroup.POST("/suspend-stc/:id", middleware.RequireAuth, stc.SuspendStc)
 	 stcgroup.POST("/activate-stc/:id",middleware.RequireAuth, stc.ActivateStc)
-   stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
+     stcgroup.GET("/filter-by-state", middleware.RequireAuth, stc.FilterStcByState)
 	 stcgroup.GET("/get-all-mda-stc", middleware.RequireMda, stc.GetAllMdaStc)
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
-   stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
+     stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
 	 stcgroup.GET("/profile",middleware.RequireStc,stc.GetStcProfile)
 
 
-  studentgroup:= r.Group("/student")
+    studentgroup:= r.Group("/student")
 	studentgroup.POST("/create-fme",middleware.RequireFme,student.CreateFmeStudent)
 	studentgroup.POST("/create-mda",middleware.RequireMda,student.CreateMdaStudent)
 
@@ -127,10 +126,12 @@ mdagroup.GET("/download-csv", middleware.RequireFme, mda.DownloadMdaCsv)
 	jobgroup.POST("/save-apply", middleware.RequireStudent, job.ApplyorSaveJob)
 	jobgroup.GET("/:jobType", middleware.RequireAuth, job.GetJobType)
 	jobgroup.GET("/applied-jobs", middleware.RequireStudent, job.GetAppliedJobs)
-	jobgroup.GET("/get-all-applied-jobs", middleware.RequireAuth, jobs.GetAllAppliedJobs)
+	jobgroup.GET("/get-all-applied-jobs", middleware.RequireAuth, job.GetAllAppliedJobs)
 	jobgroup.GET("/get-all-saved-jobs", middleware.RequireAuth, job.GetAllSavedJobs)
 	jobgroup.GET("/saved-jobs", middleware.RequireStudent, job.GetSavedJobs)
 	jobgroup.GET("/get-student-stats", middleware.RequireAuth, job.GetJobStat)
 	jobgroup.GET("/get-single-student-stats", middleware.RequireStudent, job.GetStudentJobStat)
-	r.Run(":8080")
+	jobgroup.GET("/close/:jobID", middleware.RequireEmployer, job.CloseJobStatus)
+	jobgroup.GET("/employer-dashboard", middleware.RequireEmployer, job.EmployerDashboard)
+	r.Run(":8000")
 }

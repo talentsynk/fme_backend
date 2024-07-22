@@ -3,13 +3,14 @@ package jobs
 import (
 	"errors"
 	"fme_backend/internal/config"
+	"fme_backend/internal/utilities"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"fme_backend/internal/utilities"
 )
 
 func CreateJob(c *gin.Context) {
@@ -102,14 +103,16 @@ func GetAllJobs(c *gin.Context){
 
 	// Get the total number of jobs
 	if result := config.DB.Table("jobs").
+	    Where("status = ?", true).
 		Count(&total); result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
 		return
 	}
 
 	 if   result := config.DB.Table("jobs").
-	    Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name As last_name").
+	    Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type,jobs.responsibilities,jobs.job_title,jobs.requirement, jobs.location AS location, jobs.budget AS budget, jobs.status, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name As last_name").
 		Joins("JOIN employers ON jobs.employer_id = employers.id").
+		Where("jobs.status = ?", true).
 		Limit(limit).
 		Offset(offset).
 		Find(&jobs); result.Error != nil {
@@ -446,7 +449,7 @@ func GetJobStat(c *gin.Context){
 	c.JSON(http.StatusOK, gin.H{
 		"total_applied_jobs":totalAppliedJobs,
 		"total_job_recommendations":totalJobRecommendation,
-		"total_completed_jobs":totalCompletedJobs,
+		"total_jobs_completed":totalCompletedJobs,
 	})
 
 
@@ -546,4 +549,160 @@ func GetSavedJobs(c *gin.Context){
         return
 	}
 	c.JSON(http.StatusOK, gin.H{"save_jobs":savedJobs})
+}
+
+func CloseJobStatus(c *gin.Context){
+	employerIDstr, exist := c.Get("employerID")
+	if !exist{
+		 c.JSON(http.StatusUnauthorized,gin.H{
+			"message":"Problem with the authorization token",
+		 })
+           return	    
+	}
+	employerID, ok := employerIDstr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+		return
+	}
+    
+	    
+	jobID  := c.Param("jobID")
+	if jobID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":"Job ID is required",
+		})
+		return
+	}
+
+
+	tx := config.DB.Begin()
+
+    var job Job
+	if err := tx.Where("id = ? AND employer_id = ?", jobID, employerID).First(&job).Error; err != nil{
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":"Job not found or not authorized",
+		})
+		return
+	}
+
+
+  if !job.Status {
+	tx.Rollback()
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error":"Job is already closed",
+	})
+  }
+
+
+	job.Status = false
+	if err := tx.Save(&job).Error; err != nil{
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":"Failed to update job status",
+		})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{
+		"message":"Job closed successfully",
+	})
+}
+
+// func EmployerDashboard(c *gin.Context){
+// 	var totalJobPosted int64
+// 	var totalArtisanEmployed int64
+// 	var totalCompletedJobs int64
+
+//    // Count the total number of jobs posted
+// 	if result := config.DB.Table("jobs").Count(&totalJobPosted); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 	    return
+// 	}
+
+
+// 	 // Count the total number of artisan employed
+// 	if result := config.DB.Table("artisan_employed").Count(&totalArtisanEmployed); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 	    return
+// 	}
+
+// 	 // Count the total number of artisan employed
+// 	if result := config.DB.Table("completed_jobs").Count(&totalCompletedJobs); result.Error != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+// 		return
+// 	}
+
+
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"total_job_posted":totalJobPosted,
+// 		"total_artisan_employed":totalArtisanEmployed,
+// 		"total_jobs_completed":totalCompletedJobs,
+// 	})
+	
+
+// }
+
+
+
+func EmployerDashboard(c *gin.Context){
+	employerIDstr, exist := c.Get("employerID")
+	if !exist{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+
+		return
+	}
+	employerID, ok := employerIDstr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+		return
+	}
+
+	fmt.Printf("Employer ID: %d\n", employerID)
+	var totalJobPosted int64
+	var totalArtisanEmployed int64
+	var totalCompletedJobs int64
+
+		// Count the total number of jobs posted by the employer
+		if result := config.DB.Table("jobs").Where("employer_id = ?", employerID).Count(&totalJobPosted); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+		fmt.Printf("Total Jobs Posted: %d\n", totalJobPosted)
+		// Count the total number of artisans employed by the employer
+		if result := config.DB.Table("artisan_employed").
+		    Where("employer_id = ?", employerID).
+		    Count(&totalArtisanEmployed); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+		fmt.Printf("Total Artisans Employed: %d\n", totalArtisanEmployed)
+
+		// Count the total number of completed jobs that were posted by the employer
+		if result := config.DB.Table("completed_jobs").
+		    Joins("JOIN jobs ON completed_jobs.job_id = jobs.id").
+			Where("jobs.employer_id = ?", employerID).
+			Count(&totalCompletedJobs); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+
+		fmt.Printf("Total Completed Jobs: %d\n", totalCompletedJobs)
+
+
+		c.JSON(http.StatusOK, gin.H{
+			"total_job_posted":        totalJobPosted,
+			"total_artisan_employed":  totalArtisanEmployed,
+			"total_jobs_completed":    totalCompletedJobs,
+		})
 }

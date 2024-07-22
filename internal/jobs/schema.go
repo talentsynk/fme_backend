@@ -21,11 +21,13 @@ type GetAllJobsSchema struct{
 	LastName         string 
     Location         string
     Description      string 
-    JobType          string  
+    JobType          string 
+	Budget           string 
     JobTitle         string 
     Requirement      string
 	Responsibilities string
     CreatedAt        time.Time
+	Status           bool 
 	EmployerID       uint  
  
 }
@@ -36,11 +38,13 @@ type GetJobSchema struct {
 	LastName           string 
     Location           string
     Description        string 
+	Budget             string
     JobType            string  
     JobTitle           string 
     Requirement        string
 	Responsibilities   string
     CreatedAt          time.Time
+	Status             bool 
 	EmployerID         uint  
 
 }
