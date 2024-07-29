@@ -98,6 +98,24 @@ func CreateEmployer(c *gin.Context) {
 }
 
 
+
+
+func GetAllEmployer(c *gin.Context){
+	var employers []GetEmployerSchema
+
+	if result := config.DB.Table("employers").
+	Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
+	Find(&employers); result.Error != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()});
+	     return
+	}
+
+     c.JSON(http.StatusOK, gin.H{"employers":employers}) 
+}
+
+
+
+
 func GetEmployer(c *gin.Context) {
 	employerIDstr, exists := c.Get("employerID")
 	if !exists {
@@ -158,3 +176,66 @@ func GetEmployerByID(c *gin.Context){
   c.JSON(http.StatusOK, gin.H{"employer":employer})
 
 }
+
+
+
+
+func EmployerDashboard(c *gin.Context){
+	employerIDstr, exist := c.Get("employerID")
+	if !exist{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+
+		return
+	}
+	employerID, ok := employerIDstr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+		return
+	}
+
+	fmt.Printf("Employer ID: %d\n", employerID)
+	var totalJobPosted int64
+	var totalArtisanEmployed int64
+	var totalCompletedJobs int64
+
+		// Count the total number of jobs posted by the employer
+		if result := config.DB.Table("jobs").Where("employer_id = ?", employerID).Count(&totalJobPosted); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+		fmt.Printf("Total Jobs Posted: %d\n", totalJobPosted)
+		// Count the total number of artisans employed by the employer
+		if result := config.DB.Table("artisan_employed").
+		    Where("employer_id = ?", employerID).
+		    Count(&totalArtisanEmployed); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+		fmt.Printf("Total Artisans Employed: %d\n", totalArtisanEmployed)
+
+		// Count the total number of completed jobs that were posted by the employer
+		if result := config.DB.Table("completed_jobs").
+		    Joins("JOIN jobs ON completed_jobs.job_id = jobs.id").
+			Where("jobs.employer_id = ?", employerID).
+			Count(&totalCompletedJobs); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+			return
+		}
+	
+
+		fmt.Printf("Total Completed Jobs: %d\n", totalCompletedJobs)
+
+
+		c.JSON(http.StatusOK, gin.H{
+			"total_job_posted":        totalJobPosted,
+			"total_artisan_employed":  totalArtisanEmployed,
+			"total_jobs_completed":    totalCompletedJobs,
+		})
+}
+
