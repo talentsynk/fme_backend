@@ -115,7 +115,9 @@ func main() {
 	employergroup  := r.Group("/employer")
 	employergroup.POST("/create-employer", employer.CreateEmployer)
 	employergroup.GET("/get-employer", middleware.RequireEmployer, employer.GetEmployer)
-	employergroup.GET("/:id", middleware.RequireEmployer, employer.GetEmployerByID)
+	employergroup.GET("/:id", middleware.RequireAuth, employer.GetEmployerByID)
+	employergroup.GET("/get-all-employer", middleware.RequireEmployer, employer.GetAllEmployer)
+	employergroup.GET("/employer-dashboard", middleware.RequireEmployer, employer.EmployerDashboard)
   
 
 	jobgroup := r.Group("/job")
@@ -133,6 +135,5 @@ func main() {
 	jobgroup.GET("/get-student-stats", middleware.RequireAuth, job.GetJobStat)
 	jobgroup.GET("/get-single-student-stats", middleware.RequireStudent, job.GetStudentJobStat)
 	jobgroup.GET("/close/:jobID", middleware.RequireEmployer, job.CloseJobStatus)
-	jobgroup.GET("/employer-dashboard", middleware.RequireEmployer, job.EmployerDashboard)
 	r.Run(":8000")
 }
