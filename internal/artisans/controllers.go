@@ -44,10 +44,10 @@ func GetArtisanProfile(c *gin.Context) {
 
 func GetAllArtisans(c * gin.Context) {
 	var artisans []Artisans
-	err := config.DB.Find(&artisans)
+	err := config.DB.Scan(&artisans)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Error trying to fetch data",
+			"message":err,
 		})
 		return
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fme_backend/internal/artisans"
 	"fme_backend/internal/config"
 	"fme_backend/internal/course"
 	"fme_backend/internal/dashboard"
@@ -134,6 +135,9 @@ func main() {
 	jobgroup.GET("/saved-jobs", middleware.RequireStudent, job.GetSavedJobs)
 	jobgroup.GET("/get-student-stats", middleware.RequireAuth, job.GetJobStat)
 	jobgroup.GET("/get-single-student-stats", middleware.RequireStudent, job.GetStudentJobStat)
-	jobgroup.GET("/close/:jobID", middleware.RequireEmployer, job.CloseJobStatus)
-	r.Run(":8000")
+	
+	artisanGroup := r.Group("/artisan")
+	artisanGroup.GET("/all", middleware.RequireAuth, artisans.GetAllArtisans)
+	artisanGroup.GET("/:id", middleware.RequireAuth, artisans.GetArtisanProfile)
+	r.Run(":8080")
 }

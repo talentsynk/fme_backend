@@ -11,7 +11,7 @@ type Artisans struct {
 
 	StudentID uint 
 	UserID uint
-
+	Skill string
 
 
 }
