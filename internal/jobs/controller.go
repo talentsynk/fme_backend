@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fme_backend/internal/config"
 	"fme_backend/internal/utilities"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -14,8 +13,6 @@ import (
 )
 
 func CreateJob(c *gin.Context) {
-	fmt.Println("controller started")
-
 	// Extract employerID from the context
 	employerIDstr, exist := c.Get("employerID")
 	if !exist {
@@ -61,8 +58,6 @@ func CreateJob(c *gin.Context) {
 		EmployerID:  employerID,
 		Status: true,
 	}
-
-	// Assuming 'tx' is a valid gorm.DB transaction object available in the context
 
          jobresult := tx.Create(&job)
 		 if jobresult.Error != nil{
@@ -611,39 +606,3 @@ func CloseJobStatus(c *gin.Context){
 		"message":"Job closed successfully",
 	})
 }
-
-// func EmployerDashboard(c *gin.Context){
-// 	var totalJobPosted int64
-// 	var totalArtisanEmployed int64
-// 	var totalCompletedJobs int64
-
-//    // Count the total number of jobs posted
-// 	if result := config.DB.Table("jobs").Count(&totalJobPosted); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 	    return
-// 	}
-
-
-// 	 // Count the total number of artisan employed
-// 	if result := config.DB.Table("artisan_employed").Count(&totalArtisanEmployed); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 	    return
-// 	}
-
-// 	 // Count the total number of artisan employed
-// 	if result := config.DB.Table("completed_jobs").Count(&totalCompletedJobs); result.Error != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-// 		return
-// 	}
-
-
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"total_job_posted":totalJobPosted,
-// 		"total_artisan_employed":totalArtisanEmployed,
-// 		"total_jobs_completed":totalCompletedJobs,
-// 	})
-	
-
-// }
-
-
