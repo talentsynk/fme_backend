@@ -4,10 +4,8 @@ import (
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
-	"fmt"
 	"net/http"
 	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -94,7 +92,6 @@ func CreateEmployer(c *gin.Context) {
         "message": "Employer created successfully",
     })
 
-    fmt.Println(employer)
 }
 
 
@@ -197,7 +194,7 @@ func EmployerDashboard(c *gin.Context){
 		return
 	}
 
-	fmt.Printf("Employer ID: %d\n", employerID)
+
 	var totalJobPosted int64
 	var totalArtisanEmployed int64
 	var totalCompletedJobs int64
@@ -208,7 +205,6 @@ func EmployerDashboard(c *gin.Context){
 			return
 		}
 	
-		fmt.Printf("Total Jobs Posted: %d\n", totalJobPosted)
 		// Count the total number of artisans employed by the employer
 		if result := config.DB.Table("artisan_employed").
 		    Where("employer_id = ?", employerID).
@@ -217,7 +213,7 @@ func EmployerDashboard(c *gin.Context){
 			return
 		}
 	
-		fmt.Printf("Total Artisans Employed: %d\n", totalArtisanEmployed)
+	
 
 		// Count the total number of completed jobs that were posted by the employer
 		if result := config.DB.Table("completed_jobs").
@@ -228,10 +224,6 @@ func EmployerDashboard(c *gin.Context){
 			return
 		}
 	
-
-		fmt.Printf("Total Completed Jobs: %d\n", totalCompletedJobs)
-
-
 		c.JSON(http.StatusOK, gin.H{
 			"total_job_posted":        totalJobPosted,
 			"total_artisan_employed":  totalArtisanEmployed,
