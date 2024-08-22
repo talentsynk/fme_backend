@@ -6,7 +6,6 @@ import (
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 )
 
 func CreateMda(c *gin.Context) {
-    fmt.Println("controller started")
     if c.BindJSON(&MdaCreateSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
             "error": "Failed to read request body",
@@ -50,7 +48,7 @@ func CreateMda(c *gin.Context) {
         UserID:           newUserID,
     }
 
-    fmt.Println(mda)
+ 
     mdaresult := tx.Create(&mda) 
     if mdaresult.Error != nil {
         tx.Rollback() 
@@ -70,7 +68,6 @@ func CreateMda(c *gin.Context) {
 
 
 func GetAllMdas(c *gin.Context) {
-    fmt.Println("controller started")
     limitStr := c.Query("limit")
     pageStr := c.Query("page")
 
@@ -379,7 +376,6 @@ func ActivateMda(c *gin.Context) {
 
 
 func MdaTotal(c *gin.Context) {
-    fmt.Println("Get Total number of MDA, active MDA, inactive MDA")
     var totalCount, activeCount, inactiveCount int64
 
     // Total number of MDAs
