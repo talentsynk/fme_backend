@@ -1,7 +1,7 @@
 package jobs
 
 import (
-   "gorm.io/gorm"
+	"gorm.io/gorm"
 )
 
 
@@ -9,50 +9,44 @@ type Job  struct {
 	gorm.Model
     JobTitle          string   `gorm:"type:varchar(255);not null"`
 	Location          string   `gorm:"type:varchar(255);not null"`
-	Budget            string   `gorm:"type:varchar(255);not null"`
+	Budget            float64   
 	JobType           string   `gorm:"type:varchar(255);not null"`
 	Category          string   `gorm:"type:varchar(255);not null"`
 	Description       string   `gorm:"not null"`
 	Requirement       string   `gorm:"not null"`
 	Responsibilities  string   `gorm:"not null"`
-	Status            bool    
+	HiringStatus            bool 
+	Skills    string
+	Status	string
 	EmployerID        uint 
-
 }
 
 type JobApplication struct {
 	gorm.Model
     JobID      uint   
-    StudentID  uint   
+    ArtisanID  uint  
+	Ratings string
+	ApplicationStatus string 
+}
+
+type JobApplicationRating struct {
+	gorm.Model
+	Rating uint
+	JobApplicationID  uint
+	Description	string
 }
 
 
 type SaveJob struct {
 	gorm.Model
     JobID      uint   
-    StudentID  uint 
+    ArtisanID  uint 
 }
 
-type JobRecommendation struct {
-	 gorm.Model
-	 StudentID            uint     
-	 RecommendationText   string   `gorm:"type:varchar(255);not null"`
-     
-	}
-
-type CompletedJobs struct{
-	 gorm.Model
-	 JobID          uint
-	 StudentID      uint  
-	 EmployerID     uint
-	 RecommendationText   string   `gorm:"type:varchar(255);not null"`
-}
-
-
-type ArtisanEmployed struct{
+type EmployerJobRating struct {
 	gorm.Model
-	StudentID  uint
-	EmployerID uint
-	RecommendationText   string   `gorm:"type:varchar(255);not null"` 
-
+    JobID      uint   
+	Ratings uint
+	Description string 
 }
+

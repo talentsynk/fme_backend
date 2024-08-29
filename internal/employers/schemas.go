@@ -4,7 +4,8 @@ package employer
 
 var CreateEmployerSchema struct {
     FirstName   string   
-    LastName    string   
+    LastName    string  
+    BusinessName    string 
     Email       string   
     PhoneNumber string   
     NIN         string   

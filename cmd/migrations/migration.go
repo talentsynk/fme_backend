@@ -32,9 +32,8 @@ func main() {
 		&job.Job{},
 		&job.JobApplication{},
 		&job.SaveJob{},
-		&job.JobRecommendation{},
-		&job.CompletedJobs{},
-		&job.ArtisanEmployed{},
+		&job.EmployerJobRating{},
+		&job.JobApplicationRating{},
 		&artisans.Artisans{},
 
 

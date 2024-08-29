@@ -1717,6 +1717,10 @@ func GraduateStudent(c *gin.Context) {
         artisans := artisans.Artisans{
             UserID: instance.UserID,
             StudentID: instance.ID,
+            LastName: instance.Lastname,
+            FirstName: instance.Firstname,
+            LGA: instance.LocalGovernment,
+            StateOfResidence: instance.StateOfResidence,
 
         }
 
@@ -1793,6 +1797,10 @@ func GraduateStudent(c *gin.Context) {
         artisans := artisans.Artisans{
             UserID: instance.UserID,
             StudentID: instance.ID,
+            LastName: instance.Lastname,
+            FirstName: instance.Firstname,
+            LGA: instance.LocalGovernment,
+            StateOfResidence: instance.StateOfResidence,
 
         }
 
@@ -1873,6 +1881,10 @@ func GraduateStudent(c *gin.Context) {
         artisans := artisans.Artisans{
             UserID: instance.UserID,
             StudentID: instance.ID,
+            LastName: instance.Lastname,
+            FirstName: instance.Firstname,
+            LGA: instance.LocalGovernment,
+            StateOfResidence: instance.StateOfResidence,
 
         }
 

@@ -27,8 +27,21 @@ func GetArtisanProfile(c *gin.Context) {
         return
     }
 
-	var artisan Artisans
-	err =  config.DB.First(&artisan, id).Error
+	var artisan struct {
+		ID                uint
+		BusinessName      string
+		BusinessDescription string
+		Skill             string
+		AverageRating     float64
+	}
+	
+	err = config.DB.Table("artisans").
+		Select("artisans.id, artisans.business_name, artisans.business_description, artisans.skill, COALESCE(AVG(job_application_ratings.rating), 0) as average_rating").
+		Joins("LEFT JOIN job_applications ON job_applications.artisan_id = artisans.id").
+		Joins("LEFT JOIN job_application_ratings ON job_application_ratings.job_application_id = job_applications.id").
+		Where("artisans.id = ?", id).
+		Group("artisans.id").
+		First(&artisan).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Error trying to fetch data",
@@ -43,8 +56,22 @@ func GetArtisanProfile(c *gin.Context) {
 
 
 func GetAllArtisans(c * gin.Context) {
-	var artisans []Artisans
-	err := config.DB.Scan(&artisans)
+	var artisans []struct {
+		ID                uint
+		BusinessName      string
+		BusinessDescription string
+		Skill             string
+		AverageRating     float64
+		FirstName 			string
+		LastName 			string
+	}
+	
+	err := config.DB.Table("artisans").
+		Select("artisans.id, artisans.business_name, artisans.business_description, artisans.first_name, artisans.last_name, artisans.skill, COALESCE(AVG(job_application_ratings.rating), 0) as average_rating").
+		Joins("LEFT JOIN job_applications ON job_applications.artisan_id = artisans.id").
+		Joins("LEFT JOIN job_application_ratings ON job_application_ratings.job_application_id = job_applications.id").
+		Group("artisans.id").
+		Scan(&artisans).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message":err,

@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"errors"
 	"fme_backend/internal/config"
 	"fme_backend/internal/utilities"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 func CreateJob(c *gin.Context) {
@@ -44,37 +42,38 @@ func CreateJob(c *gin.Context) {
 	})
   } 
 
-	tx := config.DB.Begin() 
+  // create job object
+  job := Job{
+	JobTitle:    CreateJobSchema.JobTitle,
+	Location:    CreateJobSchema.Location,	//revisit
+	Budget:       CreateJobSchema.Budget,
+	JobType:       typeOfJobs,
+	Category:     CreateJobSchema.Category,
+	Description:  CreateJobSchema.Description,
+	Requirement: CreateJobSchema.Requirement,
+	Responsibilities: CreateJobSchema.Responsibilities,
+	EmployerID:  employerID,
+	HiringStatus: true,
+	Status: "open",
+}
 
-	job := Job{
-		JobTitle:    CreateJobSchema.JobTitle,
-		Location:    CreateJobSchema.Location,
-		Budget:       CreateJobSchema.Budget,
-		JobType:       typeOfJobs,
-		Category:     CreateJobSchema.Category,
-		Description:  CreateJobSchema.Description,
-		Requirement: CreateJobSchema.Requirement,
-		Responsibilities: CreateJobSchema.Responsibilities,
-		EmployerID:  employerID,
-		Status: true,
+	// save the job object 
+	err := config.DB.Save(&job).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "error trying to create the job",
+		})
+		return
 	}
-
-         jobresult := tx.Create(&job)
-		 if jobresult.Error != nil{
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":"Failed to create job",
-			})
-			return
-		 }
-		 tx.Commit()
-	     c.JSON(http.StatusOK, gin.H{
-		"message": "Job created successfully",
+	c.JSON(http.StatusOK,gin.H{
+		"message":"job created cuccesfully",
 	})
 }
 
-
+// add akk necessary filters to this and any auth user
 func GetAllJobs(c *gin.Context){
+
+	// add filters
 
 	   limitStr := c.Query("limit")
 	   pageStr := c.Query("page")
@@ -93,29 +92,54 @@ func GetAllJobs(c *gin.Context){
 
 	   offset := (page - 1) * limit 
 
-	  var jobs []GetAllJobsSchema
-	  var total int64
+	   var queryParams JobFilterSchema
+	if err := c.ShouldBindQuery(&queryParams); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	// Get the total number of jobs
-	if result := config.DB.Table("jobs").
-	    Where("status = ?", true).
-		Count(&total); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+	// query the db for the data using filters and employer id
+	var jobs []GetJobSchema
+	result := config.DB.Table("jobs").
+					 Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status")
+	
+	// handle filters
+	if queryParams.MaxBudget != 0 {
+		result.Where("budget <= ?",queryParams.MaxBudget)
+	}
+
+	if queryParams.MinBudget != 0 {
+		result.Where("budget >= ?",queryParams.MinBudget)
+	}
+
+	if queryParams.JobType == "full-time" || queryParams.JobType == "part-time" {
+		result.Where("job_type = ?",queryParams.JobType)
+	}
+
+	if queryParams.Status == "open" || queryParams.Status == "ongoing" || queryParams.Status == "completed" {
+		result.Where("status = ?",queryParams.Status)
+
+	}
+
+	if queryParams.DaysAgo != 0 {
+		someDaysAgo := time.Now().AddDate(0,0,-int(queryParams.DaysAgo))
+		result.Where("created_at >= ?",someDaysAgo)
+	}
+
+	err = result.Limit(limit).Offset(offset).Order("jobs.created_at DESC").Find(&jobs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "problem querying database",
+		})
 		return
 	}
 
-	 if   result := config.DB.Table("jobs").
-	    Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type,jobs.responsibilities,jobs.job_title,jobs.requirement, jobs.location AS location, jobs.budget AS budget, jobs.status, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name As last_name").
-		Joins("JOIN employers ON jobs.employer_id = employers.id").
-		Where("jobs.status = ?", true).
-		Limit(limit).
-		Offset(offset).
-		Find(&jobs); result.Error != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-		      return
-		}
+	//return the data 
+	c.JSON(http.StatusOK,gin.H{
+		"jobs":jobs,
+	})
 
-		c.JSON(http.StatusOK, gin.H{"total":total, "jobs": jobs})
 }
 
 func GetJobID(c *gin.Context){
@@ -131,17 +155,13 @@ func GetJobID(c *gin.Context){
 	     return
 	}
 
-
-	
-
-	var job GetJobSchema
-
+	var job GetJobByIdsSchema
 	
 	result := config.DB.Table("jobs").
-	    Select("jobs.id AS id, jobs.location AS location, jobs.description AS description, jobs.job_type AS job_type, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.created_at AS created_at, employers.first_name AS first_name, employers.last_name AS last_name, employers.id AS employer_id").
-		Joins("JOIN employers ON jobs.employer_id = employers.id").
-		Where("jobs.id = ?", id).
-		First(&job)
+						Select("jobs.id AS id, jobs.job_title AS job_title, employers.id AS employer_id, employers.first_name AS employer_first_name, employers.last_name AS employer_last_name, jobs.skills AS skills, jobs.created_at AS created_at, jobs.location AS location, jobs.job_type AS job_type, jobs.requirement AS requirements, jobs.responsibilities AS responsibilities, jobs.description AS description, jobs.status AS status, jobs.hiring_status AS hiring_status").
+						Joins("JOIN employers ON jobs.employer_id = employers.id").
+						Where("jobs.id = ?", id).
+						First(&job)
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -152,269 +172,167 @@ func GetJobID(c *gin.Context){
 	c.JSON(http.StatusOK, job)
 }
 
-
-func GetLatestJobs(c *gin.Context){
-	limitStr := c.Query("limit")
-	pageStr := c.Query("page")
- 
-	
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-	 limit = 18
-	}
-
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-	 page = 1 
-	}
-
-	offset := (page - 1) * limit 
-
-	
-	sevenDaysAgo := time.Now().AddDate(0,0,-7)
-   var jobs []GetAllJobsSchema
-
-  if   result := config.DB.Table("jobs").
-	 Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name As last_name").
-	 Joins("JOIN employers ON jobs.employer_id = employers.id").
-	 Where("jobs.created_at >= ?", sevenDaysAgo).
-	 Limit(limit).
-	 Offset(offset).
-	 Find(&jobs); result.Error != nil {
-		 c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-		   return
-	 }
-
-	 c.JSON(http.StatusOK, gin.H{"jobs": jobs})
-
-}
-
-func GetJobType(c *gin.Context){
-	jobType := c.Param("jobType")
-
-    limitStr  :=  c.Query("limit")
-	pageStr :=  c.Query("page")
-
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 18
-	}
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil  || page <= 0{
-		page = 1
-	}
-
-	offset := (page - 1) * limit
-	var total int64
-
-	if result := config.DB.Table("jobs").
-	Where("jobs.job_type = ?", jobType).
-	Count(&total); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+// only artisans 
+func SaveNewJob(c *gin.Context) {
+	// get the job id
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
 		return
 	}
 
-	var jobs []GetAllJobsSchema
-    if result := config.DB.Table("jobs").
-	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type,jobs.responsibilities, jobs.requirement, jobs.job_title, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-	Joins("JOIN employers ON jobs.employer_id = employers.id").
-	Where("jobs.job_type = ?", jobType).
-	Limit(limit).
-	Offset(offset).
-	Find(&jobs); result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"total":total,
-		"jobs":jobs,
-	})
-}
-
-
-
-
-
-
-
-func SearchJob(c *gin.Context){
-	query := c.Query("query")
-	if query == ""{
-		c.JSON(http.StatusBadGateway, gin.H{"error":"Search query is required"})
-		return
-	}
-
-
-	var jobsearch []GetAllJobsSchema
-	if err := config.DB.Table("jobs").
-	Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_type AS job_type, jobs.location AS location, jobs.budget AS budget, jobs.description AS description, jobs.job_title AS job_title, jobs.requirement AS requirement, jobs.responsibilities AS responsibilities, jobs.category AS category, jobs.employer_id AS employer_id, employers.first_name AS first_name, employers.last_name AS last_name").
-	Joins("JOIN employers ON jobs.employer_id = employers.id").
-	Where("jobs.job_title LIKE ? OR jobs.location LIKE ? OR jobs.budget LIKE ? OR jobs.category LIKE ? OR jobs.job_type LIKE ? OR jobs.description LIKE ? OR employers.first_name LIKE ? OR employers.last_name LIKE ?", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%", "%"+query+"%").
-	Find(&jobsearch).Error; err != nil {
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search for Jobs", "details": err.Error()})
-	return
-}
-
-
-  if len(jobsearch) == 0 {
-	c.JSON(http.StatusOK, gin.H{"message": "No matching mdas found"})
-  }
-
-	c.JSON(http.StatusOK, jobsearch)
-}
-
-
-func ApplyorSaveJob(c *gin.Context){
-	studentIDStr, exists := c.Get("studentID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
 	     return
 	}
 
-	studentID, ok := studentIDStr.(uint)
+
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
 	if !ok {
 		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
 		return
 	}
 
-
-	var jobActionSchema struct{
-		JobID  uint `json:"job_id" binding:"required"`
-        Action string  `json:"action" binding:"required"`
+	//create the save job model
+	savedJob := SaveJob{
+		ArtisanID: artisanID,
+		JobID: uint(jobId),
 	}
+	var savedId uint
 
-	if err := c.ShouldBindJSON(&jobActionSchema); err != nil{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"Failed to read request body"})
-	    return
+	// check if the job has been saved previously
+	err = config.DB.Table("save_jobs").
+				Select("id").
+				Where("job_id = ? AND artisan_id = ?", savedJob.JobID, savedJob.ArtisanID).
+				Find(&savedId).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError,
+				 gin.H{"message":"Error scanning database","savedid":savedId,})
+	     return
+		} 
+		
+		if savedId != 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"message":"Job already saved"})
+	     return
+		}
+
+	// save the job
+	err = config.DB.Save(&savedJob).Error
+	if err !=nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "error trying to save the job",
+		})
+		return
 	}
-
-
-	tx := config.DB.Begin()
-
-	switch jobActionSchema.Action {
-	case  "apply":
-		var existingApplication JobApplication
-		if result := tx.Where("job_id = ? AND student_id = ?", jobActionSchema.JobID, studentID).First(&existingApplication); result.Error == nil{
-			tx.Rollback()
-			c.JSON(http.StatusConflict, gin.H{"error":"You have already applied for this job"})
-		     return  
-		}else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound){
-           tx.Rollback()
-		   c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error occure while checking for existing application"})
-		   return
-		}
-     
-		jobApplication := JobApplication{
-			JobID: jobActionSchema.JobID,
-			StudentID: studentID,
-		}
-
-		if result := tx.Create(&jobApplication); result.Error != nil {
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error":"Failed to commit tranction", "details": result.Error.Error()})
-			return
-		}
-		
-		if err := tx.Commit().Error; err != nil {
-            tx.Rollback()
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction", "details": err.Error()})
-            return
-        }
-
-        c.JSON(http.StatusOK, gin.H{"message": "Applied for job successfully"})
-
-	case "save":
-		var existingSave SaveJob
-       if result := tx.Where("job_id = ? AND student_id = ?", jobActionSchema.JobID, studentID).First(&existingSave); result.Error == nil {
-		  tx.Rollback()
-		  c.JSON(http.StatusConflict, gin.H{"error":"You have already save this job"})
-		  return
-	   }else if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound){
-		 tx.Rollback()
-		 c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error occured while checking for existing saved job", "details": result.Error.Error()})
-		 return
-	   }
-
-        savedJob := SaveJob{
-			JobID: jobActionSchema.JobID,
-			StudentID: studentID,
-		}
-		
-		if result := tx.Create(&savedJob); result.Error  != nil {
-			tx.Rollback()
-			c.JSON(http.StatusBadRequest, gin.H{"error":"Failed  to save job", "detailes":result.Error.Error()})
-		     return
-		}
-		
-		if err := tx.Commit().Error; err != nil{
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to commit transaction", "details":err.Error()})
-		    return
-		}
-		c.JSON(http.StatusOK, gin.H{"message":"The job has been saved successfully"})
-	default:
-		tx.Rollback()
-		c.JSON(http.StatusBadRequest, gin.H{"error":"Invalid action"})
-	}
-
+	c.JSON(http.StatusOK, gin.H{
+		"message": "job saved successfully",
+	})
 }
 
+func ApplyForJob(c * gin.Context) {
+	// get the job id
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
 
-func GetAppliedJobs(c *gin.Context){
-	studentIDStr, exists := c.Get("studentID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "problem with the authorization token"})
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
 	     return
 	}
 
-	studentID, ok := studentIDStr.(uint)
-	if !ok{
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-        return
+
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
 	}
 
-	var appliedJobs []Job
-	if err := config.DB.Joins("JOIN job_applications ON jobs.id = job_applications.job_id").
-        Where("job_applications.student_id = ?", studentID).Find(&appliedJobs).Error; err != nil{
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error", "details":err.Error()})
-			return 
+	//create the save job model
+	appliedJob := JobApplication{
+		ArtisanID: artisanID,
+		JobID: uint(jobId),
+	}
+
+	var appliedId uint
+
+	// check if the job has been saved previously
+	err = config.DB.Table("job_applications").
+				Select("id").
+				Where("job_id = ? AND artisan_id = ?", appliedJob.JobID, appliedJob.ArtisanID).
+				Find(&appliedId).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError,
+				 gin.H{"message":"Error scanning database","savedid":appliedId,})
+	     return
+		} 
+		
+		if appliedId != 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"message":"Job already saved"})
+	     return
 		}
-		c.JSON(http.StatusOK, gin.H{"applied_jobs":appliedJobs})
-  }
 
+	// save the job
+	err = config.DB.Save(&appliedJob).Error
+	if err !=nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "error trying to save the job",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "job applied for successfully",
+	})
+}
 
-
-
-  func GetAllAppliedJobs(c *gin.Context){
-	var appliedJobs []struct {
-		JobID     uint   `json:"job_id"`
-		FirstName        string 
-		LastName         string 
-		Location         string
-		Description      string 
-		JobType          string  
-		JobTitle         string 
-		Requirement      string
-		Responsibilities string
-        StudentID uint   `json:"student_id"`
-        AppliedAt time.Time `json:"applied_at"` 
-		EmployerID        uint  
+func GetAppliedJobs(c *gin.Context){
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
 	}
 
-	if err := config.DB.Table("jobs").
-	 Select("jobs.id as job_id, jobs.job_title, jobs.location, jobs.description, jobs.job_type, jobs.requirement, jobs.responsibilities,employers.first_name AS first_name, employers.last_name AS last_name, employers.id AS employer_id,job_applications.student_id, job_applications.created_at as applied_at").
-     Joins("JOIN job_applications ON jobs.id = job_applications.job_id"). 
-	 Joins("JOIN employers ON jobs.employer_id = employers.id"). 
-     Find(&appliedJobs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
-        return
+	var appliedJobs []GetAppliedJobSchema
+	// get all the applied jobs
+	err := config.DB.Table("jobs").
+    Select("jobs.id AS id, jobs.job_title AS name, jobs.description AS description, job_applications.application_status AS application_status").
+    Joins("JOIN job_applications ON job_applications.job_id = jobs.id").
+    Where("job_applications.artisan_id = ?", artisanID).
+    Scan(&appliedJobs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "error trying retrieve jobs data",
+		})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"applied_jobs":appliedJobs})
+	
+	c.JSON(http.StatusOK,gin.H{
+		"jobs": appliedJobs,
+	})
+	
+
 }
 
 func GetJobStat(c *gin.Context){
@@ -449,160 +367,942 @@ func GetJobStat(c *gin.Context){
 
 
 }
-func GetStudentJobStat(c *gin.Context) {
-	studentIDStr, exists := c.Get("studentID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
+func GetArtisanJobProfile(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
 		return
 	}
 
-	studentID, ok := studentIDStr.(uint)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-		return
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
 	}
 
-	var totalAppliedJobs int64
-	var totalJobRecommendation int64
-	var totalCompletedJobs int64
-
-	// Count the total number of jobs applied for by the student
-	if result := config.DB.Table("job_applications").Where("student_id = ?", studentID).Count(&totalAppliedJobs); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-		return
+	var artisanDetails struct {
+		TotalApplications  int64
+		AverageRating      float64
+		TotalRatings       int64
+		BusinessName       string
+		Skills             string
+		ArtisanID          uint
+		BusinessDescription string
 	}
+	
+	err = config.DB.Table("artisans").
+		Joins("LEFT JOIN job_applications ON job_applications.artisan_id = artisans.id").
+		Joins("LEFT JOIN job_application_ratings ON job_application_ratings.job_application_id = job_applications.id").
+		Select(`artisans.id AS artisan_id,
+				artisans.business_name,
+				artisans.skill AS skills,
+				artisans.business_description,
+				COUNT(DISTINCT job_applications.id) AS total_applications,
+				COALESCE(AVG(job_application_ratings.rating), 0) AS average_rating,
+				COUNT(job_application_ratings.rating) AS total_ratings`).
+		Where("artisans.id = ?", id).
+		Group("artisans.id").
+		Scan(&artisanDetails).Error
 
-	// Count the total number of job recommendations for the student
-	if result := config.DB.Table("job_recommendations").Where(" job_recommendations.student_id = ?", studentID).Count(&totalJobRecommendation); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-		return
-	}
-
-	// Count the total number of completed jobs for the student
-	if result := config.DB.Table("completed_jobs").Where("completed_jobs.student_id = ?", studentID).Count(&totalCompletedJobs); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-		return
-	}
-
-
-	c.JSON(http.StatusOK, gin.H{
-		"student_id":                studentID,
-		"total_applied_jobs":        totalAppliedJobs,
-		"total_job_recommendations": totalJobRecommendation,
-		"total_completed_jobs":      totalCompletedJobs,
-	})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"error retrieving db data"})
+	     return
+		}
+		c.JSON(http.StatusOK, gin.H{"artisan":artisanDetails})
+	
 }
 
 
 func GetSavedJobs(c *gin.Context){
-	studentIDStr, exists := c.Get("studentID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "problem with the authorization token"})
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
+	}
+
+	var savedJobs []GetSavedJobSchema
+	// get all the applied jobs
+	err := config.DB.Table("jobs").
+    Select("jobs.id AS id, jobs.job_title AS name, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job, jobs.location AS location").
+    Joins("JOIN save_jobs ON save_jobs.job_id = jobs.id").
+    Where("save_jobs.artisan_id = ?", artisanID).
+    Scan(&savedJobs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "error trying retrieve jobs data",
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK,gin.H{
+		"jobs": savedJobs,
+	})
+}
+
+// accept a job 
+// confirm if the job has already been hired out by checking job status
+func HireArtisan(c *gin.Context) {
+	// get the job id and the artisan id
+	if err := c.BindJSON(&HireArtisanSchema); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to read request body",
+		})
+		return
+	}
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var jobApplication JobApplication
+	var job Job
+
+	err := config.DB.
+				Where("id = ?", HireArtisanSchema.JobId).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+
+
+	// change the application status and job status
+	err = config.DB.
+				Where("artisan_id = ? AND job_id = ?", HireArtisanSchema.ArtisanId, HireArtisanSchema.JobId).
+				First(&jobApplication).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data 2",
+		})
+		return
+	}
+	
+	
+	tx := config.DB.Begin()
+
+	// change the job application
+	jobApplication.ApplicationStatus = "hired"
+	if err = tx.Save(&jobApplication).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to error updating job application status",
+		})
+		return
+	}
+
+	//change the job status
+	job.Status = "ongoing"
+	if err = tx.Save(&job).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to error updating job status",
+		})
+		return
+	}
+
+	//end transaction
+	if err = tx.Commit().Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to commit the changes",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"message": "artisan hired successfully",
+	})
+}
+
+// view all applicants fix up rating
+func ViewApplicants(c *gin.Context) {
+	// get the job id 
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
 	     return
 	}
 
-	studentID, ok := studentIDStr.(uint)
-	if !ok{
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Problem with the authorization token"})
-        return
+
+	// verify if the employer has aceess to view the applicants
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
 	}
 
-	var savedJobs []Job
-	if err := config.DB.Joins("JOIN save_jobs ON jobs.id = save_jobs.job_id").
-        Where("save_jobs.student_id = ?", studentID).Find(&savedJobs).Error; err != nil{
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"Database error", "details":err.Error()})
-			return 
-		}
-		c.JSON(http.StatusOK, gin.H{"saved_jobs":savedJobs})
-  }
-
-
-
-
-  func GetAllSavedJobs(c *gin.Context){
-	var savedJobs []struct {
-		JobID             uint   `json:"job_id"`
-		FirstName         string 
-		LastName          string 
-		Location          string
-		Description       string 
-		JobType           string  
-		JobTitle          string 
-		Requirement       string
-		Responsibilities  string
-        StudentID         uint   `json:"student_id"`
-        AppliedAt         time.Time `json:"applied_at"` 
-		EmployerID        uint  
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
 	}
 
-	if err := config.DB.Table("jobs").
-	 Select("jobs.id as job_id, jobs.job_title, jobs.location, jobs.description, jobs.job_type, jobs.requirement, jobs.responsibilities,employers.first_name AS first_name, employers.last_name AS last_name, employers.id AS employer_id,save_jobs.student_id, save_jobs.created_at as saved_at").
-     Joins("JOIN save_jobs ON jobs.id = save_jobs.job_id"). 
-	 Joins("JOIN employers ON jobs.employer_id = employers.id"). 
-     Find(&savedJobs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
-        return
+	var job Job
+	var applicants []GetApplicantSchema
+
+	err = config.DB.Table("jobs").
+				Where("id = ?", jobId).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data 1",
+		})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"save_jobs":savedJobs})
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+
+
+	// get all the artisan info from the applications.
+	// write query to get all the artisans that match that jobid
+	subQuery := config.DB.Table("job_application_ratings").
+    Select("job_applications.artisan_id, COALESCE(AVG(job_application_ratings.rating), 0) as average_rating").
+    Joins("JOIN job_applications ON job_applications.id = job_application_ratings.job_application_id").
+    Group("job_applications.artisan_id")
+
+err = config.DB.Table("artisans").
+    Select("job_applications.id AS application_id, job_applications.application_status AS application_status,artisans.id AS artisan_id, artisans.business_name AS business_name, artisans.first_name, artisans.last_name, artisans.business_description AS business_description, job_applications.created_at AS job_application_date, COALESCE(subquery.average_rating, 0) AS average_rating").
+    Joins("JOIN job_applications ON job_applications.artisan_id = artisans.id").
+    Joins("LEFT JOIN (?) AS subquery ON subquery.artisan_id = artisans.id", subQuery). // Use LEFT JOIN to ensure all artisans are included
+    Where("job_applications.job_id = ?", jobId).
+    Scan(&applicants).Error
+	
+		if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"applicants": applicants,
+	})
 }
 
-func CloseJobStatus(c *gin.Context){
-	employerIDstr, exist := c.Get("employerID")
-	if !exist{
-		 c.JSON(http.StatusUnauthorized,gin.H{
-			"message":"Problem with the authorization token",
-		 })
-           return	    
-	}
-	employerID, ok := employerIDstr.(uint)
-	if !ok{
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"message":"Problem with the authorization token",
-		})
-		return
-	}
-    
-	    
-	jobID  := c.Param("jobID")
-	if jobID == "" {
+// complete a job with ratings  fix up the 
+func CompleteJob(c *gin.Context) {
+	// get the request data 
+	if err := c.BindJSON(&CompleteJobSchema); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":"Job ID is required",
+			"error": "Failed to read request body",
 		})
 		return
 	}
 
+	// get the job id 
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
 
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+
+	// verify if the employer has aceess to view the applicants
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var job Job
+
+	err = config.DB.
+				Where("id = ?", jobId).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+
+	if job.Status == "completed" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "job has already been rated",
+		})
+		return
+	}
+
+	// update the job status
 	tx := config.DB.Begin()
 
-    var job Job
-	if err := tx.Where("id = ? AND employer_id = ?", jobID, employerID).First(&job).Error; err != nil{
+	job.Status  = "completed"
+
+	err = tx.Save(&job).Error
+	if err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":"Job not found or not authorized",
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to change job status",
+		})
+		return
+
+	}
+	
+
+	// rate the artisan
+	// get the application id
+	var jobApplication JobApplication
+	err = config.DB.Where("job_id = ? AND application_status = ?", jobId, "hired").
+    Find(&jobApplication).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to get the jobApplication",
 		})
 		return
 	}
 
 
-  if !job.Status {
-	tx.Rollback()
-	c.JSON(http.StatusBadRequest, gin.H{
-		"error":"Job is already closed",
-	})
-  }
+	rating := JobApplicationRating{
+		JobApplicationID: jobApplication.ID,
+		Rating: CompleteJobSchema.Rating,
+		Description: CompleteJobSchema.Description,
+		
+	}
 
-
-	job.Status = false
-	if err := tx.Save(&job).Error; err != nil{
+	err = tx.Save(&rating).Error
+	if err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":"Failed to update job status",
+			"error": "Unable to change job status",
 		})
 		return
 	}
 
 	tx.Commit()
+	//return successful
 	c.JSON(http.StatusOK, gin.H{
-		"message":"Job closed successfully",
+		"message": "rating successful",
 	})
+}
+
+//get jobs stats
+
+// get my personal jobs with filters
+func GetMyJobs(c *gin.Context) {
+	// Extract employerID from the context
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+
+	// get the filters 
+	var queryParams JobFilterSchema
+	if err := c.ShouldBindQuery(&queryParams); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+	// query the db for the data using filters and employer id
+	var jobs []GetJobSchema
+	result := config.DB.Table("jobs").
+					 Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status").
+					 Where("employer_id = ?", employerID)
+	
+	// handle filters
+	if queryParams.MaxBudget != 0 {
+		result.Where("budget <= ?",queryParams.MaxBudget)
+	}
+
+	if queryParams.MinBudget != 0 {
+		result.Where("budget >= ?",queryParams.MinBudget)
+	}
+
+	if queryParams.JobType == "full-time" || queryParams.JobType == "part-time" {
+		result.Where("job_type = ?",queryParams.JobType)
+	}
+
+	if queryParams.Status == "open" || queryParams.Status == "ongoing" || queryParams.Status == "completed" {
+		result.Where("status = ?",queryParams.Status)
+
+	}
+
+	if queryParams.DaysAgo != 0 {
+		someDaysAgo := time.Now().AddDate(0,0,-int(queryParams.DaysAgo))
+		result.Where("created_at >= ?",someDaysAgo)
+	}
+
+	err := result.Order("jobs.created_at DESC").Find(&jobs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "problem querying database",
+		})
+		return
+	}
+
+	//return the data 
+	c.JSON(http.StatusOK,gin.H{
+		"jobs":jobs,
+	})
+}
+
+// close a job application
+func CloseJob(c *gin.Context) {
+	// get the job id 
+	// get the job id 
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+
+	// verify if the employer has aceess to view the applicants
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var job Job
+
+	err = config.DB.Table("jobs").
+				Where("id = ?", jobId).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data 1",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+
+	if job.Status != "open" {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"error": "job is currently not open",
+		})
+		return
+	}
+	if !job.HiringStatus {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "job already closed",
+		})
+		return
+	}
+
+	job.HiringStatus = false
+	err = config.DB.Save(&job).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to change job status",
+		})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"job closed successfully",
+	})
+
+}
+
+func OpenJob(c *gin.Context) {
+	// get the job id 
+	// get the job id 
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+
+	// verify if the employer has aceess to view the applicants
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var job Job
+
+	err = config.DB.Table("jobs").
+				Where("id = ?", jobId).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data 1",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+
+	if job.Status != "open" {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"error": "job is currently no open",
+		})
+		return
+	}
+
+	if job.HiringStatus {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "job already open",
+		})
+		return
+	}
+
+	job.HiringStatus = true
+	err = config.DB.Save(&job).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to change job status",
+		})
+		return
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"job opened successfully",
+	})
+
+}
+
+func RateEmployer(c *gin.Context) {
+
+	if err := c.BindJSON(&CreateJobSchema); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to read request body",
+		})
+		return
+	}
+
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	jobId, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	// check if the job is completed
+	var job Job
+	err = config.DB.First(&job,jobId).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message":"Error getting Job"})
+	     return
+	}
+	if job.Status != "completed" {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Cannot rate uncompleted job"})
+	     return
+	}
+
+	// create the rating
+	rating := EmployerJobRating{
+		JobID: job.ID,
+		Ratings: CompleteJobSchema.Rating,
+		Description: CompleteJobSchema.Description,
+	}
+
+	// save the rating
+	err = config.DB.Save(&rating).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message":"Unable to save rating"})
+	     return
+	}
+	c.JSON(http.StatusOK, gin.H{"message":"employer rating succesful"})
+
+}
+
+func GetArtisanRating(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	var ratings []struct {
+		CreatedAt    time.Time
+		Rating       uint
+		Description  string
+		EmployerID   uint
+		FirstName    string
+		LastName     string
+	}
+	
+	err = config.DB.Table("job_application_ratings").
+		Joins("JOIN job_applications ON job_applications.id = job_application_ratings.job_application_id").
+		Joins("JOIN jobs ON jobs.id = job_applications.job_id").
+		Joins("JOIN employers ON employers.id = jobs.employer_id").
+		Select(`job_application_ratings.created_at AS created_at,
+				job_application_ratings.rating AS rating,
+				job_application_ratings.description AS description,
+				jobs.employer_id AS employer_id,
+				employers.first_name AS first_name,
+				employers.last_name AS last_name`).
+		Where("job_applications.artisan_id = ?", id).
+		Scan(&ratings).Error
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message":"error querying the database"})
+	     return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"ratings":ratings,
+	})
+	
+}
+
+
+func GetEmployerRating(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	var ratings []struct {
+		CreatedAt     time.Time
+		Rating        uint
+		Description   string
+		ArtisanID     uint
+		BusinessName  string
+	}
+	
+	err = config.DB.Table("employer_job_ratings").
+		Joins("JOIN job_applications ON job_applications.id = employer_job_ratings.job_id").
+		Joins("JOIN artisans ON artisans.id = job_applications.artisan_id").
+		Joins("JOIN jobs ON jobs.id = job_applications.job_id").
+		Select(`employer_job_ratings.created_at AS created_at,
+				employer_job_ratings.ratings AS rating,
+				employer_job_ratings.description AS description,
+				artisans.id AS artisan_id,
+				artisans.business_name AS business_name`).
+		Where("jobs.employer_id = ?", id).
+		Scan(&ratings).Error
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message":"error querying the database"})
+	     return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"ratings":ratings,
+	})
+	
+}
+
+func DeclineApplicant(c *gin.Context) {
+	// get the job id
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var jobApplication JobApplication
+	// change the application status and job status
+	err = config.DB.
+	Where("id = ?", id).
+	First(&jobApplication).Error
+
+	if err != nil {
+	c.JSON(http.StatusBadRequest, gin.H{
+	"error": "Failed to retrieve job data 2",
+	})
+	return
+	}
+
+	var job Job
+
+	err = config.DB.
+				Where("id = ?", jobApplication.JobID).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+	if jobApplication.ApplicationStatus == "hired" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Cannot deline an hired artisan",
+		})
+	}
+
+	if jobApplication.ApplicationStatus == "declined" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Artisan already declined",
+		})
+	}
+
+	jobApplication.ApplicationStatus = "declined"
+	err = config.DB.Save(&jobApplication).Error
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Unable to save decline artisan",
+		})
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"message":"application declined successfully",
+	})
+		
+}
+
+func ShortlistApplicant(c *gin.Context) {
+	// get the job id
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+	// get the employer id
+	employerIDstr, exist := c.Get("employerID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	employerID, ok := employerIDstr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+		return
+	}
+
+	var jobApplication JobApplication
+	// change the application status and job status
+	err = config.DB.
+	Where("id = ?", id).
+	First(&jobApplication).Error
+
+	if err != nil {
+	c.JSON(http.StatusBadRequest, gin.H{
+	"error": "Failed to retrieve job data 2",
+	})
+	return
+	}
+
+	var job Job
+
+	err = config.DB.
+				Where("id = ?", jobApplication.JobID).
+				First(&job).Error
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to retrieve job data",
+		})
+		return
+	}
+
+	// check if the employer can work on the job
+	if employerID != job.EmployerID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Wrong employer details",
+		})
+		return
+	}
+	if jobApplication.ApplicationStatus == "hired" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Cannot deline an hired artisan",
+		})
+	}
+
+	if jobApplication.ApplicationStatus == "listed" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Artisan already declined",
+		})
+	}
+
+	jobApplication.ApplicationStatus = "listed"
+	err = config.DB.Save(&jobApplication).Error
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Unable to save decline artisan",
+		})
+	}
+	c.JSON(http.StatusOK,gin.H{
+		"message":"application listed successfully",
+	})
+		
 }

@@ -67,10 +67,8 @@ func CreateEmployer(c *gin.Context) {
     employer := Employer{
         FirstName:   CreateEmployerSchema.FirstName,
         LastName:    CreateEmployerSchema.LastName,
-        Email:       CreateEmployerSchema.Email,
         PhoneNumber: CreateEmployerSchema.PhoneNumber,
         NIN:         CreateEmployerSchema.NIN,
-        Password:    string(hashedPassword), // Store the hashed password
         State:       State,
         LGA:         CreateEmployerSchema.LGA,
         UserID:      newUserID,
@@ -128,20 +126,28 @@ func GetEmployer(c *gin.Context) {
 		return
 	}
 
-	var employer GetEmployerSchema
+	var result struct {
+		ID          uint
+		FirstName   string
+		LastName    string
+		Email       string
+		PhoneNumber string
+	}
+	
+	err := config.DB.Table("employers").
+		Select("employers.id, employers.first_name, employers.last_name, users.email, employers.phone_number").
+		Joins("JOIN users ON users.id = employers.user_id").
+		Where("employers.id = ?", employerID).
+		First(&result).Error
 
-	result := config.DB.Table("employers").
-		Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
-		First(&employer, employerID)
-
-	if result.Error != nil {
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Employer not found",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"employer": employer})
+	c.JSON(http.StatusOK, gin.H{"employer": result})
 }
 
 
@@ -156,26 +162,31 @@ func GetEmployerByID(c *gin.Context){
 		return 
 	 }
 
-	 var employer GetEmployerSchema
-      result := config.DB.Table("employers").
-	  Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
-	  Where("id = ?", employerID).
-	  First(&employer)
+	 var result struct {
+		ID          uint
+		FirstName   string
+		LastName    string
+		Email       string
+		PhoneNumber string
+	}
+	
+	err = config.DB.Table("employers").
+		Select("employers.id, employers.first_name, employers.last_name, users.email, employers.phone_number").
+		Joins("JOIN users ON users.id = employers.user_id").
+		Where("employers.id = ?", employerID).
+		First(&result).Error
 
-  if result.Error != nil{
-	c.JSON(http.StatusNotFound, gin.H{
-		"error":"Employer not found",
-	})
+	if err != nil{
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":"Employer not found",
+		})
 
 	return 
   }
 
-  c.JSON(http.StatusOK, gin.H{"employer":employer})
+  c.JSON(http.StatusOK, gin.H{"employer":result})
 
 }
-
-
-
 
 func EmployerDashboard(c *gin.Context){
 	employerIDstr, exist := c.Get("employerID")
@@ -194,36 +205,41 @@ func EmployerDashboard(c *gin.Context){
 		return
 	}
 
-
 	var totalJobPosted int64
 	var totalArtisanEmployed int64
 	var totalCompletedJobs int64
 
 		// Count the total number of jobs posted by the employer
-		if result := config.DB.Table("jobs").Where("employer_id = ?", employerID).Count(&totalJobPosted); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		err := config.DB.Table("jobs").
+				Where("employer_id = ?", employerID).
+				Count(&totalJobPosted).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in total jobs",})
 			return
 		}
 	
-		// Count the total number of artisans employed by the employer
-		if result := config.DB.Table("artisan_employed").
-		    Where("employer_id = ?", employerID).
-		    Count(&totalArtisanEmployed); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+		// Count the total completed jobs
+		err = config.DB.Table("jobs").
+		Where("employer_id = ? AND status = ?", employerID, "completed").
+				Count(&totalCompletedJobs).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in completed jobs",})
 			return
 		}
-	
-	
 
-		// Count the total number of completed jobs that were posted by the employer
-		if result := config.DB.Table("completed_jobs").
-		    Joins("JOIN jobs ON completed_jobs.job_id = jobs.id").
-			Where("jobs.employer_id = ?", employerID).
-			Count(&totalCompletedJobs); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
+
+		// Count the total number of artisans employed
+		err = config.DB.Table("job_applications").
+						Joins("JOIN jobs ON jobs.id = job_applications.job_id").
+						Where("jobs.employer_id = ? AND job_applications.application_status = ?", employerID, "hired").
+						Select("COUNT(DISTINCT job_applications.artisan_id)").
+						Count(&totalArtisanEmployed).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in total employed artisans",})
 			return
 		}
-	
+
+
 		c.JSON(http.StatusOK, gin.H{
 			"total_job_posted":        totalJobPosted,
 			"total_artisan_employed":  totalArtisanEmployed,
