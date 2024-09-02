@@ -247,3 +247,145 @@ func EmployerDashboard(c *gin.Context){
 		})
 }
 
+func GetEmployerProfileStats(c *gin.Context) {
+	// get the employer id string
+	employerIDstr, exist := c.Get("employerID")
+	if !exist{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+
+		return
+	}
+	employerID, ok := employerIDstr.(uint)
+	if !ok{
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message":"Problem with the authorization token",
+		})
+		return
+	}
+
+	// needed variables
+	var totalJobPosted int64
+	var averageRating float64
+	var totalJobCompleted int64
+	var totalReccomendations int64
+
+	// get the total jobs posted
+	err := config.DB.Table("jobs").
+				Where("employer_id = ?", employerID).
+				Count(&totalJobPosted).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in total jobs",})
+			return
+		}
+
+	// get the average rating 
+	// get the rating 
+	err = config.DB.Table("employers").
+		Select("COALESCE(AVG(employer_job_ratings.ratings), 0) as average_rating").
+		Joins("LEFT JOIN jobs ON jobs.employer_id = employers.id").
+		Joins("LEFT JOIN employer_job_ratings ON employer_job_ratings.job_id = jobs.id").
+		Where("employers.id = ?", employerID).
+		Group("employers.id").
+		Scan(&averageRating).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+	    return
+	}
+
+	//total completed jobs
+	err = config.DB.Table("jobs").
+		Where("employer_id = ? AND status = ?", employerID, "completed").
+				Count(&totalJobCompleted).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in completed jobs",})
+			return
+		}
+
+	// total reccomendations
+	if err := config.DB.Table("employer_job_ratings").
+						Joins("JOIN jobs ON jobs.id = employer_job_ratings.job_id").
+						Where("jobs.id = ?", employerID).
+						Count(&totalReccomendations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+	    return
+	}
+
+	// return success
+	c.JSON(http.StatusOK, gin.H{
+		"rating":averageRating,
+		"total_recommendations":totalReccomendations,
+		"total_jobs_completed":totalJobCompleted,
+		"total_jobs_posted":totalJobPosted,
+	})
+}
+
+
+func GetEmployerProfileStatsByArtisan(c *gin.Context) {
+	// get the employer id
+	employerIDParam := c.Param("id")
+     
+	employerID, err := strconv.Atoi(employerIDParam)
+     if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":"Invalid employer ID",
+		})
+		return 
+	 }
+
+	// needed variables
+	var totalJobPosted int64
+	var averageRating float64
+	var totalJobCompleted int64
+	var totalReccomendations int64
+
+	// get the total jobs posted
+	err = config.DB.Table("jobs").
+				Where("employer_id = ?", employerID).
+				Count(&totalJobPosted).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in total jobs",})
+			return
+		}
+
+	// get the average rating 
+	// get the rating 
+	err = config.DB.Table("employers").
+		Select("COALESCE(AVG(employer_job_ratings.ratings), 0) as average_rating").
+		Joins("LEFT JOIN jobs ON jobs.employer_id = employers.id").
+		Joins("LEFT JOIN employer_job_ratings ON employer_job_ratings.job_id = jobs.id").
+		Where("employers.id = ?", employerID).
+		Group("employers.id").
+		Scan(&averageRating).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+	    return
+	}
+
+	//total completed jobs
+	err = config.DB.Table("jobs").
+		Where("employer_id = ? AND status = ?", employerID, "completed").
+				Count(&totalJobCompleted).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error in completed jobs",})
+			return
+		}
+
+	// total reccomendations
+	if err := config.DB.Table("employer_job_ratings").
+						Joins("JOIN jobs ON jobs.id = employer_job_ratings.job_id").
+						Where("jobs.id = ?", employerID).
+						Count(&totalReccomendations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+	    return
+	}
+
+	// return success
+	c.JSON(http.StatusOK, gin.H{
+		"rating":averageRating,
+		"total_recommendations":totalReccomendations,
+		"total_jobs_completed":totalJobCompleted,
+		"total_jobs_posted":totalJobPosted,
+	})
+}

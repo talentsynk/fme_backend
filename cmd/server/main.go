@@ -118,14 +118,17 @@ func main() {
 	employergroup.GET("/get-employer", middleware.RequireEmployer, employer.GetEmployer)
 	employergroup.GET("/:id", middleware.RequireAuth, employer.GetEmployerByID)
 	employergroup.GET("/get-all-employer", middleware.RequireEmployer, employer.GetAllEmployer)
-	employergroup.GET("/employer-dashboard", middleware.RequireEmployer, employer.EmployerDashboard)
+	employergroup.GET("/dash-stats", middleware.RequireEmployer, employer.EmployerDashboard)
+	employergroup.GET("/profile-stats", middleware.RequireEmployer, employer.GetEmployerProfileStats)
+	employergroup.GET("/profile-stats/:id", middleware.RequireArtisan, employer.GetEmployerProfileStatsByArtisan)
+
+
   
 
 	jobgroup := r.Group("/job")
 	jobgroup.POST("/create-job", middleware.RequireEmployer, job.CreateJob)
 	jobgroup.GET("/all", middleware.RequireAuth, job.GetAllJobs)
 	jobgroup.GET("/:id", middleware.RequireAuth,  job.GetJobID)
-	// jobgroup.GET("/get-latest-job", middleware.RequireAuth, job.GetLatestJobs)
 	jobgroup.POST("/save/:id", middleware.RequireArtisan, job.SaveNewJob)
 	jobgroup.POST("/apply/:id", middleware.RequireArtisan, job.ApplyForJob)
 	jobgroup.GET("/applied-jobs", middleware.RequireArtisan, job.GetAppliedJobs)
@@ -134,7 +137,6 @@ func main() {
 	jobgroup.GET("/applicants/:id", middleware.RequireEmployer, job.ViewApplicants)
 	jobgroup.POST("/rate/:id", middleware.RequireEmployer, job.CompleteJob)
 	jobgroup.GET("/my-jobs", middleware.RequireEmployer, job.GetMyJobs)
-	// jobgroup.GET("/get-single-student-stats", middleware.RequireStudent, job.GetStudentJobStat)
 	jobgroup.GET("/close/:id",middleware.RequireEmployer,job.CloseJob)	
 	jobgroup.GET("/open/:id",middleware.RequireEmployer,job.OpenJob)
 	jobgroup.GET("/rate/employer/:id",middleware.RequireArtisan,job.RateEmployer)
@@ -148,5 +150,10 @@ func main() {
 	artisanGroup := r.Group("/artisan")
 	artisanGroup.GET("/all", middleware.RequireAuth, artisans.GetAllArtisans)
 	artisanGroup.GET("/:id", middleware.RequireAuth, artisans.GetArtisanProfile)
+	artisanGroup.GET("/job-stats",middleware.RequireArtisan,artisans.GetArtisanJobStat)
+	artisanGroup.GET("/profile-stats",middleware.RequireArtisan,artisans.GetArtisanProfileStat)
+	artisanGroup.GET("/profile-stats/:id",middleware.RequireEmployer,artisans.GetArtisanProfileStatByEmployer)
+
+
 	r.Run(":8080")
 }

@@ -598,9 +598,6 @@ func Login(c *gin.Context) {
 		"message": "succesful login",
 		"role":user.Role,
 	})
-
-	fmt.Println("Stored Password: ", user.Password)
-    fmt.Println("Input Password: ", LoginSchema.Password)
 }
 
 // Request Otp 

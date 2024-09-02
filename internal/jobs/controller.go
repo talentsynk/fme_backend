@@ -211,7 +211,7 @@ func SaveNewJob(c *gin.Context) {
 	err = config.DB.Table("save_jobs").
 				Select("id").
 				Where("job_id = ? AND artisan_id = ?", savedJob.JobID, savedJob.ArtisanID).
-				Find(&savedId).Error
+				First(&savedId).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError,
 				 gin.H{"message":"Error scanning database","savedid":savedId,})
@@ -335,38 +335,6 @@ func GetAppliedJobs(c *gin.Context){
 
 }
 
-func GetJobStat(c *gin.Context){
-	var totalAppliedJobs int64
-	var totalJobRecommendation int64
-	var totalCompletedJobs int64
-
-   // Count the total number of jobs applied for
-	if result := config.DB.Table("job_applications").Count(&totalAppliedJobs); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-	    return
-	}
-
-
-	 // Count the total number of job recommendations
-	if result := config.DB.Table("job_recommendations").Count(&totalJobRecommendation); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-	    return
-	}
-
-	if result := config.DB.Table("completed_jobs").Count(&totalCompletedJobs); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": result.Error.Error()})
-		return
-	}
-
-
-	c.JSON(http.StatusOK, gin.H{
-		"total_applied_jobs":totalAppliedJobs,
-		"total_job_recommendations":totalJobRecommendation,
-		"total_jobs_completed":totalCompletedJobs,
-	})
-
-
-}
 func GetArtisanJobProfile(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == ""{
@@ -718,7 +686,6 @@ func CompleteJob(c *gin.Context) {
 	var jobApplication JobApplication
 	err = config.DB.Where("job_id = ? AND application_status = ?", jobId, "hired").
     Find(&jobApplication).Error
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Unable to get the jobApplication",
@@ -1305,4 +1272,11 @@ func ShortlistApplicant(c *gin.Context) {
 		"message":"application listed successfully",
 	})
 		
+}
+
+func GetEmployerJobStats(c *gin.Context) {
+	// get the employer id 
+
+
+	// variables needed
 }
