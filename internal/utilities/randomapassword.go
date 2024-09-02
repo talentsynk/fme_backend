@@ -7,7 +7,7 @@ import (
 )
 
 
-func generateRandomPassword() string {
+func GenerateRandomPassword() string {
     // Generate a random byte slice
     randomBytes := make([]byte, 8)
     _, err := rand.Read(randomBytes)
