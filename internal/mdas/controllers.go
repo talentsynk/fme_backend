@@ -294,12 +294,12 @@ func FilterMdaByState(c *gin.Context) {
     if tx.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{
             "error":   "Failed to retrieve MDAs",
-            "details": tx.Error.Error(), // Include details of the error
+            "details": tx.Error.Error(), 
         })
         return
     }
 
-    // Return the retrieved MDAs as the response
+    
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
@@ -323,14 +323,14 @@ func SuspendMda(c *gin.Context) {
         return
     }
 
-    // Retrieve the associated user using the UserID field in the Stc model
+    
     var user myuser.User
     if err := config.DB.First(&user, mda.UserID).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
         return
     }
 
-    // Update the IsActive field of the associated user to false
+    
     user.IsActive = false
     if err := config.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
@@ -357,14 +357,14 @@ func ActivateMda(c *gin.Context) {
         return
     }
 
-    // Retrieve the associated user using the UserID field in the Stc model
+    
     var user myuser.User
     if err := config.DB.First(&user, mda.UserID).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
         return
     }
 
-    // Update the IsActive field of the associated user to true
+  
     user.IsActive = true
     if err := config.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Mda"})
