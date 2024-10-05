@@ -6,7 +6,6 @@ import (
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 )
 
 func CreateMda(c *gin.Context) {
-    fmt.Println("controller started")
     if c.BindJSON(&MdaCreateSchema) != nil {
         c.JSON(http.StatusBadRequest, gin.H{
             "error": "Failed to read request body",
@@ -32,11 +30,11 @@ func CreateMda(c *gin.Context) {
         return
     }
    
-    // Transaction Handling
+
     tx := config.DB.Begin() 
     result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.Email, "dfcv")
     if !result {
-        tx.Rollback() // Rollback if user creation fails
+        tx.Rollback()
         c.JSON(http.StatusBadRequest, gin.H{
             "error": message,
         })
@@ -50,7 +48,7 @@ func CreateMda(c *gin.Context) {
         UserID:           newUserID,
     }
 
-    fmt.Println(mda)
+ 
     mdaresult := tx.Create(&mda) 
     if mdaresult.Error != nil {
         tx.Rollback() 
@@ -60,7 +58,7 @@ func CreateMda(c *gin.Context) {
         return
     }
 
-    tx.Commit() // Commit the transaction before returning the response
+    tx.Commit() 
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Mda created successfully",
@@ -70,7 +68,6 @@ func CreateMda(c *gin.Context) {
 
 
 func GetAllMdas(c *gin.Context) {
-    fmt.Println("controller started")
     limitStr := c.Query("limit")
     pageStr := c.Query("page")
 
@@ -151,7 +148,7 @@ func UpdateMda(c *gin.Context) {
 
     var mda Mda
 
-    // Fetch the MDA including the associated user information
+ 
     if err := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -224,7 +221,7 @@ func FilterMdaAscending(c *gin.Context) {
         IsActive bool   `json:"is_active"`
     }
 
-    // Query to join Mda and User tables
+  
     result := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -235,12 +232,12 @@ func FilterMdaAscending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in ascending order
+ 
     sort.Slice(mdas, func(i, j int) bool {
         return mdas[i].RegisterName < mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs with user details as the response
+
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
@@ -251,7 +248,7 @@ func FilterMdaDescending(c *gin.Context) {
         IsActive bool   `json:"is_active"`
     }
 
-    // Query to join Mda and User tables
+  
     result := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -262,12 +259,12 @@ func FilterMdaDescending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in descending order
+    
     sort.Slice(mdas, func(i, j int) bool {
         return mdas[i].RegisterName > mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs with user details as the response
+
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
@@ -297,12 +294,12 @@ func FilterMdaByState(c *gin.Context) {
     if tx.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{
             "error":   "Failed to retrieve MDAs",
-            "details": tx.Error.Error(), // Include details of the error
+            "details": tx.Error.Error(), 
         })
         return
     }
 
-    // Return the retrieved MDAs as the response
+    
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
@@ -326,14 +323,14 @@ func SuspendMda(c *gin.Context) {
         return
     }
 
-    // Retrieve the associated user using the UserID field in the Stc model
+    
     var user myuser.User
     if err := config.DB.First(&user, mda.UserID).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
         return
     }
 
-    // Update the IsActive field of the associated user to false
+    
     user.IsActive = false
     if err := config.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend Stc"})
@@ -360,14 +357,14 @@ func ActivateMda(c *gin.Context) {
         return
     }
 
-    // Retrieve the associated user using the UserID field in the Stc model
+    
     var user myuser.User
     if err := config.DB.First(&user, mda.UserID).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch associated user"})
         return
     }
 
-    // Update the IsActive field of the associated user to true
+  
     user.IsActive = true
     if err := config.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate Mda"})
@@ -379,7 +376,6 @@ func ActivateMda(c *gin.Context) {
 
 
 func MdaTotal(c *gin.Context) {
-    fmt.Println("Get Total number of MDA, active MDA, inactive MDA")
     var totalCount, activeCount, inactiveCount int64
 
     // Total number of MDAs

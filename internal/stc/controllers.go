@@ -5,7 +5,6 @@ import (
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 
 
 func CreateFmeStc(c *gin.Context){
-	fmt.Println("controller started")
 	if c.BindJSON(&StcCreateSchema) != nil{
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":"Failed to read request body",
@@ -50,7 +48,6 @@ func CreateFmeStc(c *gin.Context){
         Fmestc: true,
     }
 
-	fmt.Println(stc)
     stcresult := tx.Create(&stc) // Create student within transaction
     if stcresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
@@ -118,7 +115,7 @@ func CreateMdaStc(c *gin.Context){
     UserID:newUserID,
     MdaID:mdaID,
 }
-fmt.Println(stc)
+
 stcresult := tx.Create(&stc) // Create student within transaction
 if stcresult.Error != nil {
     tx.Rollback() // Rollback if student creation fails
@@ -496,7 +493,6 @@ func FilterStcByState(c *gin.Context){
 
 
 func StcTotal(c *gin.Context) {
-    fmt.Println("Get Total number of Stc, active Stc, inactive Stc")
     var totalCount, activeCount, inactiveCount int64
 
     // Total number of Stcs
@@ -505,7 +501,7 @@ func StcTotal(c *gin.Context) {
         return
     }
 
-    // Total number of active Stcs
+ 
     if result := config.DB.Model(&Stc{}).
         Joins("JOIN users ON stcs.user_id = users.id").
         Where("users.is_active = ?", true).
@@ -514,7 +510,7 @@ func StcTotal(c *gin.Context) {
         return
     }
 
-    // Total number of inactive Stc
+ 
     inactiveCount = totalCount - activeCount
 
     c.JSON(http.StatusOK, gin.H{
@@ -544,7 +540,7 @@ func StcMdaTotal(c *gin.Context) {
 
     var totalCount, activeCount int64
 
-    // Total number of Stcs
+    
     if result := config.DB.Model(&Stc{}).Where("mda_id = ?", mdaID).Count(&totalCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
