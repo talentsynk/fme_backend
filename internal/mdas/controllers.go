@@ -30,11 +30,11 @@ func CreateMda(c *gin.Context) {
         return
     }
    
-    // Transaction Handling
+
     tx := config.DB.Begin() 
     result, message, newUserID := myuser.CreateMdaUser(tx, MdaCreateSchema.Email, "dfcv")
     if !result {
-        tx.Rollback() // Rollback if user creation fails
+        tx.Rollback()
         c.JSON(http.StatusBadRequest, gin.H{
             "error": message,
         })
@@ -58,7 +58,7 @@ func CreateMda(c *gin.Context) {
         return
     }
 
-    tx.Commit() // Commit the transaction before returning the response
+    tx.Commit() 
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Mda created successfully",
@@ -148,7 +148,7 @@ func UpdateMda(c *gin.Context) {
 
     var mda Mda
 
-    // Fetch the MDA including the associated user information
+ 
     if err := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -221,7 +221,7 @@ func FilterMdaAscending(c *gin.Context) {
         IsActive bool   `json:"is_active"`
     }
 
-    // Query to join Mda and User tables
+  
     result := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -232,12 +232,12 @@ func FilterMdaAscending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in ascending order
+ 
     sort.Slice(mdas, func(i, j int) bool {
         return mdas[i].RegisterName < mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs with user details as the response
+
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 
@@ -248,7 +248,7 @@ func FilterMdaDescending(c *gin.Context) {
         IsActive bool   `json:"is_active"`
     }
 
-    // Query to join Mda and User tables
+  
     result := config.DB.Table("mdas").
         Select("mdas.*, users.email, users.is_active").
         Joins("JOIN users ON mdas.user_id = users.id").
@@ -259,12 +259,12 @@ func FilterMdaDescending(c *gin.Context) {
         return
     }
 
-    // Sort MDAs by name in descending order
+    
     sort.Slice(mdas, func(i, j int) bool {
         return mdas[i].RegisterName > mdas[j].RegisterName
     })
 
-    // Send the sorted MDAs with user details as the response
+
     c.JSON(http.StatusOK, gin.H{"mdas": mdas})
 }
 

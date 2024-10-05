@@ -501,7 +501,7 @@ func StcTotal(c *gin.Context) {
         return
     }
 
-    // Total number of active Stcs
+ 
     if result := config.DB.Model(&Stc{}).
         Joins("JOIN users ON stcs.user_id = users.id").
         Where("users.is_active = ?", true).
@@ -510,7 +510,7 @@ func StcTotal(c *gin.Context) {
         return
     }
 
-    // Total number of inactive Stc
+ 
     inactiveCount = totalCount - activeCount
 
     c.JSON(http.StatusOK, gin.H{
@@ -540,7 +540,7 @@ func StcMdaTotal(c *gin.Context) {
 
     var totalCount, activeCount int64
 
-    // Total number of Stcs
+    
     if result := config.DB.Model(&Stc{}).Where("mda_id = ?", mdaID).Count(&totalCount); result.Error != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
         return
