@@ -1,6 +1,9 @@
 package jobs
 
 import (
+	"fme_backend/internal/artisans"
+	employer "fme_backend/internal/employers"
+
 	"gorm.io/gorm"
 )
 
@@ -19,14 +22,16 @@ type Job  struct {
 	Skills    string
 	Status	string
 	EmployerID        uint 
+	Emoloyer employer.Employer			`gorm:"foreignKey:EmployerID;references:ID"`
 }
 
 type JobApplication struct {
 	gorm.Model
     JobID      uint   
     ArtisanID  uint  
-	Ratings string
-	ApplicationStatus string 
+	ApplicationStatus string
+	Job	Job `gorm:"foreignKey:JobID;references:ID"` 
+	Artisan artisans.Artisans		`gorm:"foreignKey:ArtisanID;references:ID"`
 }
 
 type JobApplicationRating struct {
@@ -34,6 +39,7 @@ type JobApplicationRating struct {
 	Rating uint
 	JobApplicationID  uint
 	Description	string
+	JobApplication JobApplication `gorm:"foreignKey:JobApplicationID;references:ID"`
 }
 
 
@@ -41,6 +47,8 @@ type SaveJob struct {
 	gorm.Model
     JobID      uint   
     ArtisanID  uint 
+	Job	Job `gorm:"foreignKey:JobID;references:ID"` 
+	Artisan artisans.Artisans		`gorm:"foreignKey:ArtisanID;references:ID"`
 }
 
 type EmployerJobRating struct {
@@ -48,5 +56,6 @@ type EmployerJobRating struct {
     JobID      uint   
 	Ratings uint
 	Description string 
+	Job	Job `gorm:"foreignKey:JobID;references:ID"` 
 }
 

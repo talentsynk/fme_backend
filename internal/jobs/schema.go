@@ -30,6 +30,8 @@ type GetJobByIdsSchema struct{
 	Description string
 	Status string
 	HiringStatus bool
+	ApplicationStatus string
+	JobSaved bool
 }
 
 type GetJobSchema struct {
@@ -39,6 +41,10 @@ type GetJobSchema struct {
 	Amount string
 	JobType string
 	Status string
+	ApplicationStatus string
+	CreatedAt time.Time
+	JobSaved bool
+	Location string
 
 }
 
@@ -76,6 +82,7 @@ type GetApplicantSchema struct {
 	FirstName string
 	LastName string
 	ApplicationStatus string
+	JobId uint
 
 
 }
@@ -91,6 +98,12 @@ type JobFilterSchema struct {
 	MaxBudget float64	`form:"max_budget"`
 	JobType string		`form:"job_type"`
 	DaysAgo uint			`form:"days_ago"`
+	Lga string				`form:"lga"`
+	State string			`form:"state"`
+}
+
+type ApplicationFilterSchema struct {
+	Status string		`form:"status"`
 }
 
 

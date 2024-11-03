@@ -1,9 +1,10 @@
 package employer
 
-
 import (
-	
+
 	"gorm.io/gorm"
+	myuser "fme_backend/internal/user"
+
 )
 
 
@@ -19,4 +20,6 @@ type Employer  struct {
 	State       string `gorm:"type:varchar(255);not null"`
 	LGA         string `gorm:"type:varchar(255);not null"`
 	UserID      uint
+	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
 }
+

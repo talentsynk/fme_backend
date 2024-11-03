@@ -1,6 +1,7 @@
 package stc
 
 import (
+	"encoding/csv"
 	"errors"
 	"fme_backend/internal/config"
 	myuser "fme_backend/internal/user"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -15,6 +17,7 @@ import (
 
 
 func CreateFmeStc(c *gin.Context){
+	// fmt.Println("controller started")
 	if c.BindJSON(&StcCreateSchema) != nil{
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":"Failed to read request body",
@@ -153,12 +156,27 @@ func GetStc(c *gin.Context){
     var stcs []GetAllStcSchema
 
     if result := config.DB.Table("stcs").
-    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address, stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
+    Select(`stcs.id AS id, 
+            stcs.name AS name, 
+            stcs.created_at AS created_at, 
+            stcs.address AS address, 
+            stcs.state AS state_of_operation, 
+            users.is_active AS is_active, 
+            users.id AS user_id, 
+            users.email AS email, 
+            COUNT(DISTINCT students.id) AS student_count, 
+            (
+                SELECT COUNT(DISTINCT student_courses.course_id) 
+                FROM student_courses 
+                JOIN students ON students.id = student_courses.student_id 
+                WHERE students.stc_id = stcs.id
+            ) AS course_count, 
+            COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, 
+            COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count`).
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
-    Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
     Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
-    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id,users,email,stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, users.email, stcs.state").
     Limit(limit).
     Offset(offset).
     Find(&stcs); result.Error != nil {
@@ -203,16 +221,29 @@ func GetAllMdaStc(c *gin.Context){
     offset := (page - 1) * limit
 
     var stcs []GetAllStcSchema
-
     if result := config.DB.Table("stcs").
-    Select("stcs.id AS id, stcs.name AS name, stcs.created_at AS created_at, stcs.address AS address,stcs.state AS state_of_operation, users.is_active AS is_active, users.id AS user_id, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count").
+    Select(`stcs.id AS id, 
+            stcs.name AS name, 
+            stcs.created_at AS created_at, 
+            stcs.address AS address, 
+            stcs.state AS state_of_operation, 
+            users.is_active AS is_active, 
+            users.id AS user_id, 
+            users.email AS email, 
+            COUNT(DISTINCT students.id) AS student_count, 
+            (
+                SELECT COUNT(DISTINCT student_courses.course_id) 
+                FROM student_courses 
+                JOIN students ON students.id = student_courses.student_id 
+                WHERE students.stc_id = stcs.id
+            ) AS course_count, 
+            COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, 
+            COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count`).
     Joins("JOIN users ON stcs.user_id = users.id").
     Joins("LEFT JOIN students ON stcs.id = students.stc_id").
-    Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
     Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
-    Joins("JOIN mdas ON stcs.mda_id = mdas.id").  
     Where("stcs.mda_id = ?", mdaID). 
-    Group("stcs.id, stcs.name, stcs.address, users.is_active,users.id,users,email, stcs.state"). // Include all non-aggregated columns in GROUP BY
+    Group("stcs.id, stcs.name, stcs.address, users.is_active, users.id, users.email, stcs.state").
     Limit(limit).
     Offset(offset).
     Find(&stcs); result.Error != nil {
@@ -598,4 +629,125 @@ func GetStcProfile(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"stc":stc})
+}
+
+func DownloadStcCsv(c *gin.Context) {
+    // Get userID
+    userIDstr, exists := c.Get("userID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user"})
+        return
+    }
+
+    userID, ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get User Role
+    userRoleStr, exists := c.Get("userRole")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user role"})
+        return
+    }
+
+    userRole, ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized user failed to convert to uint role"})
+        return
+    }
+
+    var stcs []struct {
+        StateOfOperation string
+        Name        string
+        Address      string
+        IsActive     bool   `json:"is_active"`
+        StudentCount uint    `json:"student_count"`
+        CourseCount     uint
+        Email       string
+        CertifiedStudentCount  uint
+        NonCertifedStudentCount uint
+        MdaName string
+    }
+    switch userRole {
+    case 1:
+        result:= config.DB.Table("stcs").Select("stcs.name AS name, stcs.address AS address, stcs.state AS state_of_operation, users.is_active AS is_active, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count, COALESCE(mdas.register_name, 'fme') AS mda_name").
+        Joins("JOIN users ON stcs.user_id = users.id").
+        Joins("LEFT JOIN mdas ON stcs.mda_id = mdas.id").
+        Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+        Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+        Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+        Group("stcs.name, stcs.address, users.is_active, users.email,stcs.state,mdas.register_name"). // Include all non-aggregated columns in GROUP BY
+        Find(&stcs)
+        if result.Error != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+            return
+        }
+
+    case 2: 
+        // get mdaid
+        var userMdaId uint
+        err := config.DB.Table("mdas").
+            Where("user_id = ?", userID).
+            Pluck("id", &userMdaId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        result:= config.DB.Table("stcs").Select("stcs.name AS name, stcs.address AS address, stcs.state AS state_of_operation, users.is_active AS is_active, users.email AS email, COUNT(DISTINCT students.id) AS student_count, COUNT(DISTINCT stc_courses.course_id) AS course_count, COUNT(DISTINCT CASE WHEN student_courses.is_certified THEN students.id END) AS certified_student_count, COUNT(DISTINCT CASE WHEN NOT student_courses.is_certified THEN students.id END) AS non_certified_student_count, COALESCE(mdas.register_name, 'fme') AS mda_name").
+        Joins("JOIN users ON stcs.user_id = users.id").
+        Joins("LEFT JOIN mdas ON stcs.mda_id = mdas.id").
+        Joins("LEFT JOIN students ON stcs.id = students.stc_id").
+        Joins("LEFT JOIN stc_courses ON stcs.id = stc_courses.stc_id").
+        Joins("LEFT JOIN student_courses ON students.id = student_courses.student_id").
+        Where("stcs.mda_id = ?", userMdaId).
+        Group("stcs.name, stcs.address, users.is_active, users.email,stcs.state,mdas.register_name"). // Include all non-aggregated columns in GROUP BY
+        Find(&stcs)
+        if result.Error != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+            return
+        }
+
+    default:
+        c.JSON(http.StatusUnauthorized, gin.H{"message": "default unauthorized user"})
+        return
+
+    }
+       // Generate CSV
+       csvData := [][]string{
+        {"Name", "Email", "State of Operation", "Address", "Is Active", "Student Count", "Course Count", "Certified Students", "Non Certified Students", "Mda Name"},
+    }
+
+    for _, stc := range stcs {
+        csvData = append(csvData, []string{
+            stc.Name,
+            stc.Email,
+            stc.StateOfOperation,
+            stc.Address,
+            strconv.FormatBool(stc.IsActive),
+            strconv.Itoa(int(stc.StudentCount)),
+            strconv.Itoa(int(stc.CourseCount)),
+            strconv.Itoa(int(stc.CertifiedStudentCount)),
+            strconv.Itoa(int(stc.NonCertifedStudentCount)),
+            stc.MdaName,
+ 
+        })
+    }
+
+    c.Header("Content-Disposition", "attachment; filename=students.csv")
+    c.Header("Content-Type", "text/csv")
+
+    w := csv.NewWriter(c.Writer)
+    defer w.Flush()
+
+    for _, record := range csvData {
+        if err := w.Write(record); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"message": "error writing csv"})
+            return
+        }
+    }
 }

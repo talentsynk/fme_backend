@@ -7,6 +7,7 @@ import (
 	employer "fme_backend/internal/employers"
 	job "fme_backend/internal/jobs"
 	"fme_backend/internal/mdas"
+	middleware "fme_backend/internal/middlewares"
 	"fme_backend/internal/stc"
 	"fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
@@ -25,9 +26,7 @@ func main() {
 		&course.Category{},
 		&course.Course{},
 		&stc.Stc{},
-		&course.StudentCourse{},
-		&course.MdaCourse{},
-		&course.StcCourse{},
+		&student.StudentCourse{},
 		&employer.Employer{},
 		&job.Job{},
 		&job.JobApplication{},
@@ -35,6 +34,7 @@ func main() {
 		&job.EmployerJobRating{},
 		&job.JobApplicationRating{},
 		&artisans.Artisans{},
+		&middleware.RequestLog{},
 
 
 	)

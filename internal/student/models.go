@@ -1,6 +1,8 @@
 package student
 
 import (
+	"fme_backend/internal/course"
+	myuser "fme_backend/internal/user"
 	"time"
 
 	"gorm.io/gorm"
@@ -26,5 +28,15 @@ type Student struct {
 	StcID uint
 	NationalIdentityNumber string	`gorm:"not null; default:12345678912"`
 	LocalGovernment	string	`gorm:"not null; default:'kosofe'"`
+	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
 
+}
+
+type StudentCourse struct{
+	gorm.Model
+	CourseID uint	`gorm:"not null"`
+	StudentID uint	`gorm:"not null"`
+	IsCertified	bool
+	Course    course.Course `gorm:"foreignKey:CourseID;references:ID"`
+	Student Student		`gorm:"foreignKey:StudentID;references:ID"`
 }

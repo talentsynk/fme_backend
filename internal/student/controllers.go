@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fme_backend/internal/artisans"
 	"fme_backend/internal/config"
-	"fme_backend/internal/course"
 	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 
@@ -120,7 +120,7 @@ func CreateFmeStudent(c *gin.Context) {
     }
 
     // Add Course
-    studentcourse := course.StudentCourse{
+    studentcourse := StudentCourse{
         StudentID: student.ID,
         CourseID: CreateStudentSchema.CourseID,
     }
@@ -260,7 +260,7 @@ func CreateMdaStudent(c *gin.Context) {
     }
 
     // Add Course
-    studentcourse := course.StudentCourse{
+    studentcourse := StudentCourse{
         StudentID: student.ID,
         CourseID: CreateStudentSchema.CourseID,
     }
@@ -397,7 +397,7 @@ func CreateStcStudent(c *gin.Context) {
     }
 
     // Add Course
-    studentcourse := course.StudentCourse{
+    studentcourse := StudentCourse{
         StudentID: student.ID,
         CourseID: CreateStudentSchema.CourseID,
     }
@@ -1034,18 +1034,16 @@ func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
     }, nil
 }
 
-func createMdaStudentInstance(mdaID uint, schema CreateStudentSchematype) (Student, error) {
+func createMdaStudentInstance(mdaID uint, schema CreateStudentSchematype,tx *gorm.DB) (Student, error) {
 
     dob, err := utilities.ParseDoB(schema.DOBstring)
     if err != nil {
         return Student{}, errors.New("wrong date format")
     }
-    tx := config.DB.Begin()
 
     // Create user with transaction
     result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
     if !result {
-        tx.Rollback()
         return Student{}, fmt.Errorf(message)
     }
 
@@ -1067,36 +1065,31 @@ func createMdaStudentInstance(mdaID uint, schema CreateStudentSchematype) (Stude
     }
 
     if err := tx.Create(&student).Error; err != nil {
-        tx.Rollback()
         return Student{}, fmt.Errorf("failed to create student: %v", err)
     }
 
-    studentCourse := course.StudentCourse{
+    studentCourse := StudentCourse{
         StudentID: student.ID,
         CourseID:  schema.CourseID,
     }
 
     if err := tx.Create(&studentCourse).Error; err != nil {
-        tx.Rollback()
         return Student{}, fmt.Errorf("failed to create student course: %v", err)
     }
 
-    tx.Commit()
     return student, nil
 }
 
-func createStcStudentInstance(stcID uint, schema CreateStudentSchematype) (Student, error) {
+func createStcStudentInstance(stcID uint, schema CreateStudentSchematype,tx *gorm.DB) (Student, error) {
 
     dob, err := utilities.ParseDoB(schema.DOBstring)
     if err != nil {
         return Student{}, errors.New("wrong date format")
     }
-    tx := config.DB.Begin()
 
     // Create user with transaction
     result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
     if !result {
-        tx.Rollback()
         return Student{}, fmt.Errorf(message)
     }
 
@@ -1118,37 +1111,33 @@ func createStcStudentInstance(stcID uint, schema CreateStudentSchematype) (Stude
     }
 
     if err := tx.Create(&student).Error; err != nil {
-        tx.Rollback()
         return Student{}, fmt.Errorf("failed to create student: %v", err)
     }
 
-    studentCourse := course.StudentCourse{
+    studentCourse := StudentCourse{
         StudentID: student.ID,
         CourseID:  schema.CourseID,
     }
 
     if err := tx.Create(&studentCourse).Error; err != nil {
-        tx.Rollback()
         return Student{}, fmt.Errorf("failed to create student course: %v", err)
     }
 
-    tx.Commit()
+   
     return student, nil
 }
 
 
-func createFmeStudentInstance(schema CreateStudentSchematype) (Student, error) {
+func createFmeStudentInstance(schema CreateStudentSchematype, tx *gorm.DB) (Student, error) {
 
     dob, err := utilities.ParseDoB(schema.DOBstring)
     if err != nil {
         return Student{}, errors.New("wrong date format")
     }
-    tx := config.DB.Begin()
 
     // Create user with transaction
     result, message, newUserID := myuser.CreateStudentUser(tx, schema.Email, "dfcv")
     if !result {
-        tx.Rollback()
         return Student{}, fmt.Errorf(message)
     }
 
@@ -1170,21 +1159,19 @@ func createFmeStudentInstance(schema CreateStudentSchematype) (Student, error) {
     }
 
     if err := tx.Create(&student).Error; err != nil {
-        tx.Rollback()
+        
         return Student{}, fmt.Errorf("failed to create student: %v", err)
     }
 
-    studentCourse := course.StudentCourse{
+    studentCourse := StudentCourse{
         StudentID: student.ID,
         CourseID:  schema.CourseID,
     }
 
     if err := tx.Create(&studentCourse).Error; err != nil {
-        tx.Rollback()
         return Student{}, fmt.Errorf("failed to create student course: %v", err)
     }
 
-    tx.Commit()
     return student, nil
 }
 
@@ -1227,13 +1214,14 @@ func CreateMdaStudentFromCsv(c *gin.Context) {
         })
         return
     }
-
+    tx := config.DB.Begin()
     for {
         record, err := reader.Read()
         if err == io.EOF {
             break
         }
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": "Failed to read CSV file",
             })
@@ -1243,6 +1231,7 @@ func CreateMdaStudentFromCsv(c *gin.Context) {
         // Parse and validate each record
         studentSchema, err := parseAndValidateRecord(record)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Invalid data: %v", err),
             })
@@ -1250,8 +1239,9 @@ func CreateMdaStudentFromCsv(c *gin.Context) {
         }
 
         // Create user and student instances
-        student, err := createMdaStudentInstance(mdaID, studentSchema)
+        student, err := createMdaStudentInstance(mdaID, studentSchema,tx)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Failed to create student: %v", err),
             })
@@ -1260,6 +1250,7 @@ func CreateMdaStudentFromCsv(c *gin.Context) {
 
         students = append(students, student)
     }
+    tx.Commit()
 
     // If all students are successfully created
     c.JSON(http.StatusOK, gin.H{
@@ -1293,12 +1284,15 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
         return
     }
 
+    tx := config.DB.Begin()
+
     for {
         record, err := reader.Read()
         if err == io.EOF {
             break
         }
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": "Failed to read CSV file",
             })
@@ -1308,6 +1302,7 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
         // Parse and validate each record
         studentSchema, err := parseAndValidateRecord(record)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Invalid data: %v", err),
             })
@@ -1315,8 +1310,9 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
         }
 
         // Create user and student instances
-        student, err := createFmeStudentInstance(studentSchema)
+        student, err := createFmeStudentInstance(studentSchema,tx)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Failed to create student: %v", err),
             })
@@ -1325,6 +1321,7 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
 
         students = append(students, student)
     }
+    tx.Commit()
 
     // If all students are successfully created
     c.JSON(http.StatusOK, gin.H{
@@ -1336,7 +1333,7 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
 
 
 func CreateStcStudentFromCsv(c *gin.Context) {
-    // Retrieve the MDA ID
+    // Retrieve the stc ID
     stcIDStr, exists := c.Get("stcID")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{
@@ -1366,7 +1363,7 @@ func CreateStcStudentFromCsv(c *gin.Context) {
     reader := csv.NewReader(file)
     var students []Student
 
-    // Skip the header
+    // Skip the header  
     if _, err := reader.Read(); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{
             "message": "Failed to read CSV header",
@@ -1374,12 +1371,17 @@ func CreateStcStudentFromCsv(c *gin.Context) {
         return
     }
 
+    // validate the header
+
+    tx := config.DB.Begin()
+    // read other records
     for {
         record, err := reader.Read()
         if err == io.EOF {
             break
         }
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": "Failed to read CSV file",
             })
@@ -1389,6 +1391,7 @@ func CreateStcStudentFromCsv(c *gin.Context) {
         // Parse and validate each record
         studentSchema, err := parseAndValidateRecord(record)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Invalid data: %v", err),
             })
@@ -1396,8 +1399,9 @@ func CreateStcStudentFromCsv(c *gin.Context) {
         }
 
         // Create user and student instances
-        student, err := createStcStudentInstance(stcID, studentSchema)
+        student, err := createStcStudentInstance(stcID, studentSchema,tx)
         if err != nil {
+            tx.Rollback()
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": fmt.Sprintf("Failed to create student: %v", err),
             })
@@ -1406,6 +1410,7 @@ func CreateStcStudentFromCsv(c *gin.Context) {
 
         students = append(students, student)
     }
+    tx.Commit()
 
     // If all students are successfully created
     c.JSON(http.StatusOK, gin.H{
@@ -1520,8 +1525,8 @@ func DownloadStudentsCsv(c *gin.Context) {
         // Add condition for mdaid
         query = query.Where("students.mda_id = ? OR stcs.mda_id = ?", userMdaId, userMdaId)
 
-        nerr := query.Scan(&students).Error
-        if nerr != nil {
+        err = query.Scan(&students).Error
+        if err != nil {
             c.JSON(http.StatusBadRequest, gin.H{
                 "message": "error retrieving students",
             })
@@ -1716,7 +1721,6 @@ func GraduateStudent(c *gin.Context) {
         // create and save the artisan
         artisans := artisans.Artisans{
             UserID: instance.UserID,
-            StudentID: instance.ID,
             LastName: instance.Lastname,
             FirstName: instance.Firstname,
             LGA: instance.LocalGovernment,
@@ -1796,7 +1800,6 @@ func GraduateStudent(c *gin.Context) {
         // create and save the artisan
         artisans := artisans.Artisans{
             UserID: instance.UserID,
-            StudentID: instance.ID,
             LastName: instance.Lastname,
             FirstName: instance.Firstname,
             LGA: instance.LocalGovernment,
@@ -1880,7 +1883,6 @@ func GraduateStudent(c *gin.Context) {
         // create and save the artisan
         artisans := artisans.Artisans{
             UserID: instance.UserID,
-            StudentID: instance.ID,
             LastName: instance.Lastname,
             FirstName: instance.Firstname,
             LGA: instance.LocalGovernment,

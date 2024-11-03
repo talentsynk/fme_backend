@@ -1,6 +1,7 @@
 package myuser
 
 import (
+	// "fme_backend/internal/interfaces"
 	"time"
 
 	"gorm.io/gorm"
@@ -16,6 +17,8 @@ type User struct {
     OTPVerified    bool 
     Role           int             `gorm:"not null"`
     IsActive       bool            `gorm:"not null"`
+    
 
 }
+
 
