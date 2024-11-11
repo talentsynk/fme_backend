@@ -203,7 +203,7 @@ func SaveNewJob(c *gin.Context) {
 	//create the save job model
 	savedJob := SaveJob{
 		ArtisanID: artisanID,
-		JobID: uint(jobId),
+		JobID:     uint(jobId),
 	}
 	var savedId uint
 
@@ -266,7 +266,7 @@ func ApplyForJob(c * gin.Context) {
 	//create the save job model
 	appliedJob := JobApplication{
 		ArtisanID: artisanID,
-		JobID: uint(jobId),
+		JobID:     uint(jobId),
 	}
 
 	var appliedId uint
@@ -349,12 +349,12 @@ func GetArtisanJobProfile(c *gin.Context) {
 	}
 
 	var artisanDetails struct {
-		TotalApplications  int64
-		AverageRating      float64
-		TotalRatings       int64
-		BusinessName       string
-		Skills             string
-		ArtisanID          uint
+		TotalApplications   int64
+		AverageRating       float64
+		TotalRatings        int64
+		BusinessName        string
+		Skills              string
+		ArtisanID           uint
 		BusinessDescription string
 	}
 	
@@ -1274,9 +1274,9 @@ func ShortlistApplicant(c *gin.Context) {
 		
 }
 
-func GetEmployerJobStats(c *gin.Context) {
-	// get the employer id 
+// func GetEmployerJobStats(c *gin.Context) {
+// 	// get the employer id 
 
 
-	// variables needed
-}
+// 	// variables needed
+// }

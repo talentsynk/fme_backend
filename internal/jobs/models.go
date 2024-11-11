@@ -15,25 +15,25 @@ type Job  struct {
 	Description       string   `gorm:"not null"`
 	Requirement       string   `gorm:"not null"`
 	Responsibilities  string   `gorm:"not null"`
-	HiringStatus            bool 
-	Skills    string
-	Status	string
+	HiringStatus      bool 
+	Skills            string
+	Status	          string
 	EmployerID        uint 
 }
 
 type JobApplication struct {
 	gorm.Model
-    JobID      uint   
-    ArtisanID  uint  
-	Ratings string
+    JobID             uint   
+    ArtisanID         uint  
+	Ratings           string
 	ApplicationStatus string 
 }
 
 type JobApplicationRating struct {
 	gorm.Model
-	Rating uint
+	Rating            uint
 	JobApplicationID  uint
-	Description	string
+	Description	      string
 }
 
 
@@ -45,8 +45,8 @@ type SaveJob struct {
 
 type EmployerJobRating struct {
 	gorm.Model
-    JobID      uint   
-	Ratings uint
+    JobID       uint   
+	Ratings     uint
 	Description string 
 }
 

@@ -6,7 +6,7 @@ import (
 
 const (
 	PartTime       string = "part-time"
-	FullTime  string = "full-time"
+	FullTime       string = "full-time"
 )
 
 type JobType struct{}

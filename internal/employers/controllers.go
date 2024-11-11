@@ -2,13 +2,16 @@ package employer
 
 import (
 	"fme_backend/internal/config"
-	myuser "fme_backend/internal/user"
+	 myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
 	"net/http"
 	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+
 )
+
 
 
 func CreateEmployer(c *gin.Context) {
@@ -91,7 +94,6 @@ func CreateEmployer(c *gin.Context) {
     })
 
 }
-
 
 
 
