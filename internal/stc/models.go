@@ -1,6 +1,10 @@
 package stc
 
-import "gorm.io/gorm"
+import (
+	myuser "fme_backend/internal/user"
+
+	"gorm.io/gorm"
+)
 
 type Stc struct {
 	//complete it
@@ -11,4 +15,5 @@ type Stc struct {
 	Fmestc                       bool
 	MdaID                        uint
 	UserID                       uint	
+	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
 }

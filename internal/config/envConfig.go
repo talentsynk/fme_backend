@@ -39,3 +39,27 @@ func GetHashSecret() string {
 func GetResendSecret() string {
     return os.Getenv("RESEND_SECRET")
 }
+
+func GetEnvType() string {
+	return os.Getenv("ENV_TYPE")
+}
+
+func GetFmePassWord() string {
+	return os.Getenv("FME_PASSWORD")
+}
+
+func GetFmeEmail() string {
+	return os.Getenv("FME_EMAIL")
+}
+
+func GetSendMailAcctToken() string {
+	return os.Getenv("PM_ACCT_TOKEN")
+}
+
+func GetSendMailServerToken() string {
+	return os.Getenv("PM_SERVER_TOKEN")
+}
+
+func GetHomeMail() string {
+	return os.Getenv("HOME_MAIL")
+}

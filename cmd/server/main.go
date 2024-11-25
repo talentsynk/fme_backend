@@ -8,6 +8,7 @@ import (
 	employer "fme_backend/internal/employers"
 	mda "fme_backend/internal/mdas"
 	middleware "fme_backend/internal/middlewares"
+	"fme_backend/internal/scripts"
 	stc "fme_backend/internal/stc"
 	"fme_backend/internal/student"
 	myuser "fme_backend/internal/user"
@@ -24,9 +25,10 @@ func init() {
 }
 
 func main() {
+	scripts.CreateFmeAtStart()
 	r := gin.Default()
 
-	config := cors.Config{
+	corsConfig := cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
@@ -34,7 +36,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
-	r.Use(cors.New(config))
+	r.Use(cors.New(corsConfig))
+	r.Use(middleware.RequestLogger(config.DB))
 
 	usergroup := r.Group("/user")
 	usergroup.POST("/createfme", myuser.CreateFmeUser)
@@ -78,6 +81,7 @@ func main() {
 	 stcgroup.GET("/get-mda-stc/:id", middleware.RequireMda, stc.GetMdaStcByID)
      stcgroup.GET("/get-mda-total", middleware.RequireMda, stc.StcMdaTotal)
 	 stcgroup.GET("/profile",middleware.RequireStc,stc.GetStcProfile)
+	 stcgroup.GET("/download-csv",middleware.RequireAuth, stc.DownloadStcCsv)
 
 
     studentgroup:= r.Group("/student")
@@ -105,6 +109,10 @@ func main() {
 	coursegroup.POST("/create", middleware.RequireFme, course.CreateCourse)
 	coursegroup.GET("/:id", middleware.RequireAuth, course.GetCourse)
 	coursegroup.GET("/all", middleware.RequireAuth, course.GetAllCourses)
+	coursegroup.GET("/details/:id",middleware.RequireAuth,course.GetCourseDetails)
+	coursegroup.GET("/:id/top-5-mda",middleware.RequireAuth,course.GetTopMDAsByStudentCountForCourse)
+	coursegroup.GET("/:id/top-5-stc",middleware.RequireAuth,course.GetTopSTCsByStudentCountForCourse)
+
 
 	dashgroup := r.Group("/dashboard")
 	dashgroup.GET("/summary", middleware.RequireAuth, dashboard.GetDashSummary)
@@ -121,14 +129,18 @@ func main() {
 	employergroup.GET("/dash-stats", middleware.RequireEmployer, employer.EmployerDashboard)
 	employergroup.GET("/profile-stats", middleware.RequireEmployer, employer.GetEmployerProfileStats)
 	employergroup.GET("/profile-stats/:id", middleware.RequireArtisan, employer.GetEmployerProfileStatsByArtisan)
+	employergroup.GET("/ratings/:id",middleware.RequireAuth,employer.GetEmployerRating)
+	employergroup.GET("/jobs/:id",middleware.RequireArtisan,employer.GetAllEmployerJobs)
+	employergroup.GET("/similar/:id",middleware.RequireArtisan,employer.GetSimilarEmployerDetails)
+
 
 
   
 
 	jobgroup := r.Group("/job")
 	jobgroup.POST("/create-job", middleware.RequireEmployer, job.CreateJob)
-	jobgroup.GET("/all", middleware.RequireAuth, job.GetAllJobs)
-	jobgroup.GET("/:id", middleware.RequireAuth,  job.GetJobID)
+	jobgroup.GET("/all", middleware.RequireArtisan, job.GetAllJobs)
+	jobgroup.GET("/:id", middleware.RequireArtisan,  job.GetJobID)
 	jobgroup.POST("/save/:id", middleware.RequireArtisan, job.SaveNewJob)
 	jobgroup.POST("/apply/:id", middleware.RequireArtisan, job.ApplyForJob)
 	jobgroup.GET("/applied-jobs", middleware.RequireArtisan, job.GetAppliedJobs)
@@ -139,12 +151,14 @@ func main() {
 	jobgroup.GET("/my-jobs", middleware.RequireEmployer, job.GetMyJobs)
 	jobgroup.GET("/close/:id",middleware.RequireEmployer,job.CloseJob)	
 	jobgroup.GET("/open/:id",middleware.RequireEmployer,job.OpenJob)
-	jobgroup.GET("/rate/employer/:id",middleware.RequireArtisan,job.RateEmployer)
+	jobgroup.POST("/rate/employer/:id",middleware.RequireArtisan,job.RateEmployer)
 	jobgroup.GET("/profile/artisan/:id",middleware.RequireEmployer, job.GetArtisanJobProfile)
-	jobgroup.GET("/ratings/employer/:id",middleware.RequireArtisan,job.GetEmployerRating)
-	jobgroup.GET("/ratings/artisan/:id",middleware.RequireArtisan,job.GetArtisanRating)
-	jobgroup.POST("/applicants/decline/:id",middleware.RequireEmployer,job.DeclineApplicant)
-	jobgroup.POST("/applicants/short-list/:id",middleware.RequireEmployer,job.ShortlistApplicant)
+	jobgroup.GET("/applicants/decline/:id",middleware.RequireEmployer,job.DeclineApplicant)
+	jobgroup.GET("/applicants/short-list/:id",middleware.RequireEmployer,job.ShortlistApplicant)
+	jobgroup.GET("/similar/:id",middleware.RequireArtisan,job.GetSimilarJobs)
+	jobgroup.POST("/search",middleware.RequireArtisan,job.SearchForJob)
+	jobgroup.GET("/general/:id", middleware.RequireAuth,  job.GetJobGeneral)
+
 
 
 	artisanGroup := r.Group("/artisan")
@@ -153,6 +167,13 @@ func main() {
 	artisanGroup.GET("/job-stats",middleware.RequireArtisan,artisans.GetArtisanJobStat)
 	artisanGroup.GET("/profile-stats",middleware.RequireArtisan,artisans.GetArtisanProfileStat)
 	artisanGroup.GET("/profile-stats/:id",middleware.RequireEmployer,artisans.GetArtisanProfileStatByEmployer)
+	artisanGroup.GET("/ratings/:id",middleware.RequireAuth,artisans.GetArtisanRating)
+	artisanGroup.GET("/contact/:id", middleware.RequireAuth, artisans.GetContactDetails)
+	artisanGroup.GET("/me", middleware.RequireArtisan, artisans.GetMyDetails)
+	artisanGroup.GET("/download-data",middleware.RequireFme,artisans.DownloadArtisanData)
+	
+
+
 
 
 	r.Run(":8080")

@@ -41,7 +41,7 @@ const (
 	Taraba                 string = "taraba"
 	Yobe                   string = "yobe"
 	Zamfara                string = "zamfara"
-	FederalCapitalTerritory string = "federal-capital-territory"
+	FederalCapitalTerritory string = "federal capital territory"
 )
 
 // NigerianStates is a struct that holds all the Nigerian states as constants

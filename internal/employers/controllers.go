@@ -2,16 +2,16 @@ package employer
 
 import (
 	"fme_backend/internal/config"
-	 myuser "fme_backend/internal/user"
+	myuser "fme_backend/internal/user"
 	"fme_backend/internal/utilities"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"golang.org/x/crypto/bcrypt"
-
 )
-
 
 
 func CreateEmployer(c *gin.Context) {
@@ -43,6 +43,9 @@ func CreateEmployer(c *gin.Context) {
         })
         return
     }
+
+	// verify if the user is a company and verify their set their acct details
+	
 
     // Encrypt password before storing
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(CreateEmployerSchema.Password), 10)
@@ -76,6 +79,11 @@ func CreateEmployer(c *gin.Context) {
         LGA:         CreateEmployerSchema.LGA,
         UserID:      newUserID,
     }
+	if CreateEmployerSchema.IsCompany {
+		employer.IsCompany = true
+		employer.CompanyName = CreateEmployerSchema.CompanyName
+		employer.CompanyCAC = CreateEmployerSchema.CompanyCAC
+	}
 
     if err := tx.Create(&employer).Error; err != nil {
         tx.Rollback()
@@ -101,7 +109,7 @@ func GetAllEmployer(c *gin.Context){
 	var employers []GetEmployerSchema
 
 	if result := config.DB.Table("employers").
-	Select("id, first_name, last_name, email, phone_number, nin, state, lga, user_id").
+	Select("id, first_name, last_name, phone_number, nin, state, lga, user_id").
 	Find(&employers); result.Error != nil{
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()});
 	     return
@@ -109,8 +117,6 @@ func GetAllEmployer(c *gin.Context){
 
      c.JSON(http.StatusOK, gin.H{"employers":employers}) 
 }
-
-
 
 
 func GetEmployer(c *gin.Context) {
@@ -151,7 +157,6 @@ func GetEmployer(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"employer": result})
 }
-
 
 func GetEmployerByID(c *gin.Context){
 	employerIDParam := c.Param("id")
@@ -391,3 +396,196 @@ func GetEmployerProfileStatsByArtisan(c *gin.Context) {
 		"total_jobs_posted":totalJobPosted,
 	})
 }
+
+func GetEmployerRating(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	// get the filters 
+	var queryParams RatingFilterSchema
+	if err := c.ShouldBindQuery(&queryParams); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+	var ratings []struct {
+		CreatedAt     time.Time
+		Rating        uint
+		Description   string
+		ArtisanID     uint
+		BusinessName  string
+	}
+	
+	query := config.DB.Table("employer_job_ratings").
+		Joins("JOIN job_applications ON job_applications.id = employer_job_ratings.job_id").
+		Joins("JOIN artisans ON artisans.id = job_applications.artisan_id").
+		Joins("JOIN jobs ON jobs.id = job_applications.job_id").
+		Select(`employer_job_ratings.created_at AS created_at,
+				employer_job_ratings.ratings AS rating,
+				employer_job_ratings.description AS description,
+				artisans.id AS artisan_id,
+				artisans.business_name AS business_name`).
+		Where("jobs.employer_id = ?", id)
+
+	if queryParams.DaysAgo != 0 {
+		someDaysAgo := time.Now().AddDate(0,0,-int(queryParams.DaysAgo))
+		query.Where("employer_job_ratings.created_at >= ?",someDaysAgo)
+	}
+	if queryParams.MaxRating != 0 {
+		query.Where("employer_job_ratings.ratings <= ?",queryParams.MaxRating)
+	}
+
+	if queryParams.MinRating != 0 {
+		query.Where("employer_job_ratings.ratings >= ?",queryParams.MinRating)
+	}
+
+
+	err = query.Scan(&ratings).Error	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message":"error querying the database"})
+	     return
+	}
+
+	c.JSON(http.StatusOK,gin.H{
+		"ratings":ratings,
+	})
+	
+}
+
+func GetAllEmployerJobs(c *gin.Context) {
+	// get employer id
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	employerID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	var queryParams JobFilterSchema
+	if err := c.ShouldBindQuery(&queryParams); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+	// query the db for the data using filters and employer id
+	var jobs []GetJobSchema
+	result := config.DB.Table("jobs").
+					 Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status").
+					 Where("employer_id = ?", employerID)
+	
+	// handle filters
+	if queryParams.MaxBudget != 0 {
+		result.Where("budget <= ?",queryParams.MaxBudget)
+	}
+
+	if queryParams.MinBudget != 0 {
+		result.Where("budget >= ?",queryParams.MinBudget)
+	}
+
+	if queryParams.JobType == "full-time" || queryParams.JobType == "part-time" {
+		result.Where("job_type = ?",queryParams.JobType)
+	}
+
+	if queryParams.Status == "open" || queryParams.Status == "ongoing" || queryParams.Status == "completed" {
+		result.Where("status = ?",queryParams.Status)
+
+	}
+
+	if queryParams.DaysAgo != 0 {
+		someDaysAgo := time.Now().AddDate(0,0,-int(queryParams.DaysAgo))
+		result.Where("created_at >= ?",someDaysAgo)
+	}
+
+	err = result.Order("jobs.created_at DESC").Find(&jobs).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "problem querying database",
+		})
+		return
+	}
+
+	//return the data 
+	c.JSON(http.StatusOK,gin.H{
+		"jobs":jobs,
+	})
+}
+
+func GetSimilarEmployerDetails(c * gin.Context) {
+	// get the employer details
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	// get the employer state or
+	var employerState string 
+	if err = config.DB.Table("employers").Select("state").Where("id = ?",id).Scan(&employerState).Error;
+			err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message":"error reading database"})
+	     return
+			}
+
+	// get all employers that are in that area 
+	var employers []GetEmployerSchema
+
+	if result := config.DB.Table("employers").
+	Select("id, first_name, last_name, phone_number, nin, state, lga, user_id").
+	Where("state = ? AND id <> ?",employerState,id).
+	Find(&employers); result.Error != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()});
+	     return
+	}
+
+	// send the success message
+	c.JSON(http.StatusOK, gin.H{"employers":employers}) 
+
+}
+
+
+
+// // 
+// {
+//     "name_of_organisation": "Company Ltd",
+//     "email": "company@example.com",
+//     "phone_number": "234...",
+//     "cac": "CAC123456",
+//     "state": "Lagos",
+//     "lga": "Ikeja",
+//     "password": "securepassword"
+// }
+
+
+// // 
+
+// {
+//     "first_name": "John",
+//     "last_name": "Doe",
+//     "email": "john@example.com",
+//     "phone_number": "234...",
+//     "nin": "1234567890",
+//     "state": "Lagos",
+//     "lga": "Ikeja",
+//     "password": "securepassword"
+// }

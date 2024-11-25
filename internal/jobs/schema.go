@@ -30,6 +30,8 @@ type GetJobByIdsSchema struct{
 	Description string
 	Status string
 	HiringStatus bool
+	ApplicationStatus string
+	JobSaved bool
 }
 
 type GetJobSchema struct {
@@ -39,6 +41,10 @@ type GetJobSchema struct {
 	Amount string
 	JobType string
 	Status string
+	ApplicationStatus string
+	CreatedAt time.Time
+	JobSaved bool
+	Location string
 
 }
 
@@ -67,17 +73,16 @@ var HireArtisanSchema struct {
 
 
 type GetApplicantSchema struct {
-	ApplicationId         uint
-	ArtisanId             uint
-	BusinessName          string
-	BusinessDescription   string
-	JobApplicationDate    time.Time
-	AverageRating         float64
-	FirstName             string
-	LastName              string
-	ApplicationStatus     string
-
-
+	ApplicationId uint
+	ArtisanId uint
+	BusinessName string
+	BusinessDescription string
+	JobApplicationDate  time.Time
+	AverageRating float64
+	FirstName string
+	LastName string
+	ApplicationStatus string
+	JobId uint
 }
 
 var CompleteJobSchema struct {
@@ -86,11 +91,18 @@ var CompleteJobSchema struct {
 }
 
 type JobFilterSchema struct {
-	Status     string		`form:"status"`
-	MinBudget  float64	    `form:"min_budget"`
-	MaxBudget  float64	    `form:"max_budget"`
-	JobType    string		`form:"job_type"`
-	DaysAgo    uint			`form:"days_ago"`
+	Status    string	`form:"status"`
+	MinBudget float64	`form:"min_budget"`
+	MaxBudget float64	`form:"max_budget"`
+	JobType   string	`form:"job_type"`
+	DaysAgo   uint		`form:"days_ago"`
+	Lga       string	`form:"lga"`
+	State     string	`form:"state"`
+}
+
+type ApplicationFilterSchema struct {
+	Status string		`form:"status"`
+
 }
 
 

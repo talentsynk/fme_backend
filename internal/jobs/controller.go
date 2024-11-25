@@ -70,8 +70,19 @@ func CreateJob(c *gin.Context) {
 	})
 }
 
-// add akk necessary filters to this and any auth user
+// add all necessary filters to this and any auth user
 func GetAllJobs(c *gin.Context){
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
+	}
 
 	// add filters
 
@@ -101,30 +112,48 @@ func GetAllJobs(c *gin.Context){
 	// query the db for the data using filters and employer id
 	var jobs []GetJobSchema
 	result := config.DB.Table("jobs").
-					 Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status")
+					 Select("jobs.id AS id, jobs.created_at AS created_at, jobs.job_title AS job_title, jobs.description AS description, jobs.location AS location, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status,COALESCE(job_applications.application_status, '') AS application_status, COALESCE(CASE WHEN save_jobs.id IS NOT NULL THEN true ELSE false END, false) AS job_saved").
+					 Joins("LEFT JOIN employers ON employers.id = jobs.employer_id").
+					 Joins("LEFT JOIN job_applications ON jobs.id = job_applications.job_id AND job_applications.artisan_id = ?", artisanID).
+					 Joins("LEFT JOIN save_jobs ON jobs.id = save_jobs.job_id AND save_jobs.artisan_id = ?", artisanID)
+
 	
 	// handle filters
 	if queryParams.MaxBudget != 0 {
-		result.Where("budget <= ?",queryParams.MaxBudget)
+		result.Where("jobs.budget <= ?",queryParams.MaxBudget)
 	}
 
 	if queryParams.MinBudget != 0 {
-		result.Where("budget >= ?",queryParams.MinBudget)
+		result.Where("jobs.budget >= ?",queryParams.MinBudget)
 	}
 
 	if queryParams.JobType == "full-time" || queryParams.JobType == "part-time" {
-		result.Where("job_type = ?",queryParams.JobType)
+		result.Where("jobs.job_type = ?",queryParams.JobType)
 	}
 
 	if queryParams.Status == "open" || queryParams.Status == "ongoing" || queryParams.Status == "completed" {
-		result.Where("status = ?",queryParams.Status)
+		result.Where("jobs.status = ?",queryParams.Status)
 
 	}
 
 	if queryParams.DaysAgo != 0 {
 		someDaysAgo := time.Now().AddDate(0,0,-int(queryParams.DaysAgo))
-		result.Where("created_at >= ?",someDaysAgo)
+		result.Where("jobs.created_at >= ?",someDaysAgo)
 	}
+	if queryParams.Lga != "" {
+		// validate the lga
+		result.Where("employers.lga = ?",queryParams.Lga)
+	}
+	if queryParams.State != "" {
+		// validate the state
+		state, exists := utilities.ValidateState(queryParams.State)
+		if !exists {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid state type"})
+        return
+		}
+		result.Where("employers.state = ?",state)
+	}
+
 
 	err = result.Limit(limit).Offset(offset).Order("jobs.created_at DESC").Find(&jobs).Error
 
@@ -143,6 +172,51 @@ func GetAllJobs(c *gin.Context){
 }
 
 func GetJobID(c *gin.Context){
+	// get the artisan id
+	artisanIdStr, exists := c.Get("artisanID")
+	if !exists{
+		c.JSON(http.StatusUnauthorized, gin.H{"message":"problem with the authorization token"})
+	     return
+	}
+	artisanID, ok := artisanIdStr.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized,gin.H{"message":"Problem with the authorization token"})
+		return
+	}
+
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	var job GetJobByIdsSchema
+	
+	result := config.DB.Table("jobs").
+						Select("jobs.id AS id, jobs.job_title AS job_title, employers.id AS employer_id, employers.first_name AS employer_first_name, employers.last_name AS employer_last_name, jobs.skills AS skills, jobs.created_at AS created_at, jobs.location AS location, jobs.job_type AS job_type, jobs.requirement AS requirements, jobs.responsibilities AS responsibilities, jobs.description AS description, jobs.status AS status, jobs.hiring_status AS hiring_status, COALESCE(job_applications.application_status, '') AS application_status,  COALESCE(CASE WHEN save_jobs.id IS NOT NULL THEN true ELSE false END, false) AS job_saved").
+						Joins("JOIN employers ON jobs.employer_id = employers.id").
+						Joins("LEFT JOIN job_applications ON jobs.id = job_applications.job_id AND job_applications.artisan_id = ?", artisanID).
+					 	Joins("LEFT JOIN save_jobs ON jobs.id = save_jobs.job_id AND save_jobs.artisan_id = ?", artisanID).
+						Where("jobs.id = ?", id).
+						Find(&job)
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":"Job not found",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, job)
+}
+
+
+func GetJobGeneral(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == ""{
 		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
@@ -160,8 +234,9 @@ func GetJobID(c *gin.Context){
 	result := config.DB.Table("jobs").
 						Select("jobs.id AS id, jobs.job_title AS job_title, employers.id AS employer_id, employers.first_name AS employer_first_name, employers.last_name AS employer_last_name, jobs.skills AS skills, jobs.created_at AS created_at, jobs.location AS location, jobs.job_type AS job_type, jobs.requirement AS requirements, jobs.responsibilities AS responsibilities, jobs.description AS description, jobs.status AS status, jobs.hiring_status AS hiring_status").
 						Joins("JOIN employers ON jobs.employer_id = employers.id").
+						Joins("LEFT JOIN job_applications ON jobs.id = job_applications.job_id" ).
 						Where("jobs.id = ?", id).
-						First(&job)
+						Find(&job)
 
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -203,7 +278,7 @@ func SaveNewJob(c *gin.Context) {
 	//create the save job model
 	savedJob := SaveJob{
 		ArtisanID: artisanID,
-		JobID:     uint(jobId),
+		JobID: uint(jobId),
 	}
 	var savedId uint
 
@@ -211,7 +286,7 @@ func SaveNewJob(c *gin.Context) {
 	err = config.DB.Table("save_jobs").
 				Select("id").
 				Where("job_id = ? AND artisan_id = ?", savedJob.JobID, savedJob.ArtisanID).
-				First(&savedId).Error
+				Scan(&savedId).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError,
 				 gin.H{"message":"Error scanning database","savedid":savedId,})
@@ -266,7 +341,8 @@ func ApplyForJob(c * gin.Context) {
 	//create the save job model
 	appliedJob := JobApplication{
 		ArtisanID: artisanID,
-		JobID:     uint(jobId),
+		JobID: uint(jobId),
+		ApplicationStatus: "open",
 	}
 
 	var appliedId uint
@@ -349,12 +425,12 @@ func GetArtisanJobProfile(c *gin.Context) {
 	}
 
 	var artisanDetails struct {
-		TotalApplications   int64
-		AverageRating       float64
-		TotalRatings        int64
-		BusinessName        string
-		Skills              string
-		ArtisanID           uint
+		TotalApplications  int64
+		AverageRating      float64
+		TotalRatings       int64
+		BusinessName       string
+		Skills             string
+		ArtisanID          uint
 		BusinessDescription string
 	}
 	
@@ -489,6 +565,8 @@ func HireArtisan(c *gin.Context) {
 		return
 	}
 
+	// close application
+	job.HiringStatus = false
 	//change the job status
 	job.Status = "ongoing"
 	if err = tx.Save(&job).Error; err != nil {
@@ -526,6 +604,12 @@ func ViewApplicants(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
 	     return
 	}
+
+	var queryParams ApplicationFilterSchema
+	if err := c.ShouldBindQuery(&queryParams); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
 
 	// verify if the employer has aceess to view the applicants
@@ -576,14 +660,18 @@ func ViewApplicants(c *gin.Context) {
     Joins("JOIN job_applications ON job_applications.id = job_application_ratings.job_application_id").
     Group("job_applications.artisan_id")
 
-err = config.DB.Table("artisans").
-    Select("job_applications.id AS application_id, job_applications.application_status AS application_status,artisans.id AS artisan_id, artisans.business_name AS business_name, artisans.first_name, artisans.last_name, artisans.business_description AS business_description, job_applications.created_at AS job_application_date, COALESCE(subquery.average_rating, 0) AS average_rating").
+query := config.DB.Table("artisans").
+    Select("job_applications.id AS application_id, job_applications.application_status AS application_status,artisans.id AS artisan_id, artisans.business_name AS business_name, artisans.first_name, artisans.last_name, artisans.business_description AS business_description, job_applications.created_at AS job_application_date, COALESCE(subquery.average_rating, 0) AS average_rating,job_applications.job_id AS job_id").
     Joins("JOIN job_applications ON job_applications.artisan_id = artisans.id").
     Joins("LEFT JOIN (?) AS subquery ON subquery.artisan_id = artisans.id", subQuery). // Use LEFT JOIN to ensure all artisans are included
-    Where("job_applications.job_id = ?", jobId).
-    Scan(&applicants).Error
-	
-		if err != nil {
+    Where("job_applications.job_id = ?", jobId)
+
+if queryParams.Status == "open" || queryParams.Status == "listed" || queryParams.Status == "declined" || queryParams.Status == "hired" {
+	query.Where("job_applications.application_status = ?", queryParams.Status)
+}
+
+err = query.Scan(&applicants).Error	
+if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Failed to retrieve job data",
 		})
@@ -846,15 +934,15 @@ func CloseJob(c *gin.Context) {
 		return
 	}
 
-	if job.Status != "open" {
+	if job.Status == "ongoing" || job.Status == "completed" {
 		c.JSON(http.StatusBadRequest,gin.H{
-			"error": "job is currently not open",
+			"error": "cannot close an ongoing or completed job",
 		})
 		return
 	}
 	if !job.HiringStatus {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "job already closed",
+			"error": "this job is already closed",
 		})
 		return
 	}
@@ -928,9 +1016,9 @@ func OpenJob(c *gin.Context) {
 		return
 	}
 
-	if job.Status != "open" {
+	if job.Status == "ongoing" || job.Status == "completed" {
 		c.JSON(http.StatusBadRequest,gin.H{
-			"error": "job is currently no open",
+			"error": "cannot open an ongoing or completed job",
 		})
 		return
 	}
@@ -1006,96 +1094,6 @@ func RateEmployer(c *gin.Context) {
 
 }
 
-func GetArtisanRating(c *gin.Context) {
-	idStr := c.Param("id")
-	if idStr == ""{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
-	     return
-	}
-
-	var ratings []struct {
-		CreatedAt    time.Time
-		Rating       uint
-		Description  string
-		EmployerID   uint
-		FirstName    string
-		LastName     string
-	}
-	
-	err = config.DB.Table("job_application_ratings").
-		Joins("JOIN job_applications ON job_applications.id = job_application_ratings.job_application_id").
-		Joins("JOIN jobs ON jobs.id = job_applications.job_id").
-		Joins("JOIN employers ON employers.id = jobs.employer_id").
-		Select(`job_application_ratings.created_at AS created_at,
-				job_application_ratings.rating AS rating,
-				job_application_ratings.description AS description,
-				jobs.employer_id AS employer_id,
-				employers.first_name AS first_name,
-				employers.last_name AS last_name`).
-		Where("job_applications.artisan_id = ?", id).
-		Scan(&ratings).Error
-	
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message":"error querying the database"})
-	     return
-	}
-
-	c.JSON(http.StatusOK,gin.H{
-		"ratings":ratings,
-	})
-	
-}
-
-
-func GetEmployerRating(c *gin.Context) {
-	idStr := c.Param("id")
-	if idStr == ""{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
-	     return
-	}
-
-	var ratings []struct {
-		CreatedAt     time.Time
-		Rating        uint
-		Description   string
-		ArtisanID     uint
-		BusinessName  string
-	}
-	
-	err = config.DB.Table("employer_job_ratings").
-		Joins("JOIN job_applications ON job_applications.id = employer_job_ratings.job_id").
-		Joins("JOIN artisans ON artisans.id = job_applications.artisan_id").
-		Joins("JOIN jobs ON jobs.id = job_applications.job_id").
-		Select(`employer_job_ratings.created_at AS created_at,
-				employer_job_ratings.ratings AS rating,
-				employer_job_ratings.description AS description,
-				artisans.id AS artisan_id,
-				artisans.business_name AS business_name`).
-		Where("jobs.employer_id = ?", id).
-		Scan(&ratings).Error
-	
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message":"error querying the database"})
-	     return
-	}
-
-	c.JSON(http.StatusOK,gin.H{
-		"ratings":ratings,
-	})
-	
-}
 
 func DeclineApplicant(c *gin.Context) {
 	// get the job id
@@ -1274,9 +1272,78 @@ func ShortlistApplicant(c *gin.Context) {
 		
 }
 
-// func GetEmployerJobStats(c *gin.Context) {
-// 	// get the employer id 
+func GetSimilarJobs(c *gin.Context) {
+	// get the job id 
+	idStr := c.Param("id")
+	if idStr == ""{
+		c.JSON(http.StatusBadRequest, gin.H{"error":"job Id is required"})
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message":"Invalid job id provided"})
+	     return
+	}
+
+	// get the location of the employer 
+	var employerState string
+	if err =  config.DB.Table("jobs").Select("employers.state").
+					Joins("JOIN employers ON employers.id = jobs.employer_id").
+					Where("jobs.id = ?", id).Scan(&employerState).Error;
+		err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message":"Error reading database"})
+	     return
+		}
+
+	// get jobs in that location 
+	var jobs []GetJobSchema
+	if err =  config.DB.Table("jobs").
+					Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status").
+					Joins("JOIN employers ON employers.id = jobs.employer_id").
+					Where("employers.state = ? AND jobs.id <> ?", employerState,id).Order("jobs.created_at DESC").
+					Scan(&jobs).Error;
+		err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message":"Error reading database"})
+	     return
+		}
+
+	//return success 
+	c.JSON(http.StatusOK,gin.H{
+		"jobs":jobs,
+	})
+}
+
+func SearchForJob(c *gin.Context) {
+	// get the job search string
+	var requestBody struct{
+		SearchString string
+	}
+
+	if err := c.Bind(&requestBody); err != nil {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message": "Error reading request body",
+		})
+	}
+
+	if requestBody.SearchString == "" {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"message": "Bad request body",
+		})
+	}
+
+	// query the db
+	var jobs []GetJobSchema
+	if err := config.DB.Table("jobs").
+					Select("jobs.id AS id, jobs.job_title AS job_title, jobs.description AS description, jobs.budget AS amount, jobs.job_type AS job_type, jobs.status AS status").
+					Where("jobs.job_title ILIKE ?",requestBody.SearchString).
+					Scan(&jobs).Error;
+		err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message":"Error reading database"})
+	     	return
+		}
 
 
-// 	// variables needed
-// }
+	// return the success
+	c.JSON(http.StatusOK, gin.H{"jobs":jobs,})
+}
