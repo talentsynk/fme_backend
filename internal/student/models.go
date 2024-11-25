@@ -21,14 +21,14 @@ type Student struct {
 	NsqLevel		 string   `gorm:"type:varchar(255)"`
 	Address		     string       `gorm:"type:varchar(255)"`
 	GraduationStatus bool 
-	PhoneNumber	string 		`gorm:"unique"`
+	PhoneNumber	     string 		`gorm:"unique"`
 	Fmestudent        bool
-	IsDisabled 	bool
-	DisabilityName string			`gorm:"type:varchar(255)"`
+	IsDisabled 	      bool
+	DisabilityName    string			`gorm:"type:varchar(255)"`
 	GraduationDate    time.Time  `gorm:"type:date"`
-	UserID uint
-	MdaID uint
-	StcID uint
+	UserID            uint
+	MdaID             uint
+	StcID             uint
 	NationalIdentityNumber string	`gorm:"not null; default:12345678912"`
 	LocalGovernment	string	`gorm:"not null; default:'kosofe'"`
 	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`

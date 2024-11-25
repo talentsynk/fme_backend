@@ -2521,3 +2521,34 @@ func EditStudent(c *gin.Context) {
 
     }
 }
+
+func GetStudentStatisticsByState(c *gin.Context) {
+    var results []struct {
+        StateOfResidence string
+        EnrolledStudent    int64
+        GraduatedStudent  int64
+    }
+
+    // Query to calculate enrolled and graduated students grouped by state of residence
+    err := config.DB.Table("students").
+        Select("state_of_residence, "+
+            "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_count, "+
+            "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_count").
+        Group("state_of_residence").
+        Scan(&results).Error
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Failed to retrieve statistics",
+            "error":   err.Error(),
+        })
+        return
+    }
+
+    // Success response
+    c.JSON(http.StatusOK, gin.H{
+        "message":"Geographical distribution by state of residence retrieved successfully",
+        "data":    results,
+    })
+}
+

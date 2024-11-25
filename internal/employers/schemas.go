@@ -1,7 +1,5 @@
 package employer
 
-
-
 var CreateEmployerSchema struct {
     FirstName   string   
     LastName    string  
@@ -18,6 +16,7 @@ var CreateEmployerSchema struct {
 }
 
 
+
 type GetEmployerSchema struct {
     Id          uint
     FirstName   string   
@@ -26,22 +25,23 @@ type GetEmployerSchema struct {
     NIN         string   
     State       string   
     LGA         string   
-    UserId      uint      
-}
+    UserId      uint  
+}    
+
 
 type RatingFilterSchema struct {
 	DaysAgo uint			`form:"days_ago"`
-	MaxRating uint 		`form:"max_ratings"`
-	MinRating uint 		`form:"min_ratings"`
+	MaxRating uint 		    `form:"max_ratings"`
+	MinRating uint 		    `form:"min_ratings"`
 
 }
 
 
 type JobFilterSchema struct {
-	Status string		`form:"status"`
-	MinBudget float64	`form:"min_budget"`
-	MaxBudget float64	`form:"max_budget"`
-	JobType string		`form:"job_type"`
+	Status string		   `form:"status"`
+	MinBudget float64	   `form:"min_budget"`
+	MaxBudget float64	   `form:"max_budget"`
+	JobType string		    `form:"job_type"`
 	DaysAgo uint			`form:"days_ago"`
 	Lga string				`form:"lga"`
 	State string			`form:"state"`

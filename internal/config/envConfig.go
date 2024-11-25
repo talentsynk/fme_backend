@@ -3,14 +3,14 @@ package config
 import (
 	        //  "log"
 	        "os"
-            // "github.com/joho/godotenv"
+            //   "github.com/joho/godotenv"
 )
 
-// type Config struct {
-// 	// Configuration Variables
-// 	DatabaseURL string
-// 	HashSecret  string
-// }
+type Config struct {
+	// Configuration Variables
+	DatabaseURL string
+	HashSecret  string
+}
 
 // var AppConfig *Config
 

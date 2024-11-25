@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -101,6 +102,8 @@ func CreateEmployer(c *gin.Context) {
     })
 
 }
+
+
 
 func GetAllEmployer(c *gin.Context){
 	var employers []GetEmployerSchema
@@ -560,3 +563,29 @@ func GetSimilarEmployerDetails(c * gin.Context) {
 
 }
 
+
+
+// // 
+// {
+//     "name_of_organisation": "Company Ltd",
+//     "email": "company@example.com",
+//     "phone_number": "234...",
+//     "cac": "CAC123456",
+//     "state": "Lagos",
+//     "lga": "Ikeja",
+//     "password": "securepassword"
+// }
+
+
+// // 
+
+// {
+//     "first_name": "John",
+//     "last_name": "Doe",
+//     "email": "john@example.com",
+//     "phone_number": "234...",
+//     "nin": "1234567890",
+//     "state": "Lagos",
+//     "lga": "Ikeja",
+//     "password": "securepassword"
+// }

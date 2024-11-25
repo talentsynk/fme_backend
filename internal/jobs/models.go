@@ -18,28 +18,29 @@ type Job  struct {
 	Description       string   `gorm:"not null"`
 	Requirement       string   `gorm:"not null"`
 	Responsibilities  string   `gorm:"not null"`
-	HiringStatus            bool 
-	Skills    string
-	Status	string
+	HiringStatus      bool 
+	Skills            string
+	Status	          string
 	EmployerID        uint 
 	Emoloyer employer.Employer			`gorm:"foreignKey:EmployerID;references:ID"`
 }
 
 type JobApplication struct {
 	gorm.Model
+
     JobID      uint   
     ArtisanID  uint  
 	ApplicationStatus string
-	Job	Job `gorm:"foreignKey:JobID;references:ID"` 
+	Job	Job                         `gorm:"foreignKey:JobID;references:ID"` 
 	Artisan artisans.Artisans		`gorm:"foreignKey:ArtisanID;references:ID"`
 }
 
 type JobApplicationRating struct {
 	gorm.Model
-	Rating uint
+	Rating            uint
 	JobApplicationID  uint
-	Description	string
-	JobApplication JobApplication `gorm:"foreignKey:JobApplicationID;references:ID"`
+    Description	      string
+	JobApplication    JobApplication `gorm:"foreignKey:JobApplicationID;references:ID"`
 }
 
 
@@ -53,8 +54,8 @@ type SaveJob struct {
 
 type EmployerJobRating struct {
 	gorm.Model
-    JobID      uint   
-	Ratings uint
+    JobID       uint   
+	Ratings     uint
 	Description string 
 	Job	Job `gorm:"foreignKey:JobID;references:ID"` 
 }

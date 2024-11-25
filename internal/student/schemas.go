@@ -45,6 +45,12 @@ type TotalStudentInfo struct {
 	TotalInactiveStudents	int
 }
 
+type ResidenceInfo struct{
+	StatOfResidence string
+	TotalEnroll     int
+	TotalGraduated  int
+}
+
 type CreateStudentSchematype struct {
 	Firstname string
 	Lastname string

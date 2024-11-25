@@ -103,6 +103,7 @@ func main() {
 	studentgroup.POST("/graduate-student/:id", middleware.RequireAuth, student.GraduateStudent)
 	studentgroup.GET(("/disabilities"),student.GetDisabilityList)
 	studentgroup.PATCH("/edit/:id", middleware.RequireAuth, student.EditStudent)
+	studentgroup.GET("/residence-statistics", middleware.RequireFme, student.GetStudentStatisticsByState)
 
 
 	categorygroup := r.Group("category")

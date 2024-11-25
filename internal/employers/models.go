@@ -8,8 +8,6 @@ import (
 )
 
 
-
-
 type Employer  struct {
     gorm.Model
 
@@ -25,4 +23,5 @@ type Employer  struct {
 	UserID      uint
 	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
 }
+
 

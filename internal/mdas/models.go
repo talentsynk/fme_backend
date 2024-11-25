@@ -2,7 +2,7 @@ package mda
 
 import (
 	myuser "fme_backend/internal/user"
-
+    "time"
 	"gorm.io/gorm"
 )
 
@@ -12,7 +12,7 @@ type Mda struct {
 	  Address            string  `gorm:"not null"`
 	  StateOfOperation   string  `gorm:"not null"`
 	  UserID             uint
-	  User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
-
+	  User               myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
+     CreatedAt           time.Time
 }
 
