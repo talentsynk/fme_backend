@@ -23,6 +23,9 @@ type Student struct {
 	GraduationStatus bool 
 	PhoneNumber	string 		`gorm:"unique"`
 	Fmestudent        bool
+	IsDisabled 	bool
+	DisabilityName string			`gorm:"type:varchar(255)"`
+	GraduationDate    time.Time  `gorm:"type:date"`
 	UserID uint
 	MdaID uint
 	StcID uint

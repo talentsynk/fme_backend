@@ -19,6 +19,9 @@ type Employer  struct {
 	NIN         string `gorm:"unique;not null"`
 	State       string `gorm:"type:varchar(255);not null"`
 	LGA         string `gorm:"type:varchar(255);not null"`
+	IsCompany 	bool	`gorm:"default:false"`
+	CompanyName	string	`gorm:"type:varchar(255)"`
+	CompanyCAC	string	`gorm:"type:varchar(255)"`
 	UserID      uint
 	User     myuser.User 	`gorm:"foreignKey:UserID;references:ID"`
 }

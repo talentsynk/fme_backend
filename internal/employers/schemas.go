@@ -12,6 +12,9 @@ var CreateEmployerSchema struct {
     State       string   
     LGA         string   
     Password    string
+    CompanyName string
+    IsCompany   bool
+    CompanyCAC  string
 }
 
 

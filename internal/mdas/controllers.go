@@ -508,3 +508,73 @@ func DownloadMdaCsv(c *gin.Context) {
         }
     }
 }
+
+
+func EditMdaData(c *gin.Context) {
+    if c.ShouldBind(&MdaCreateSchema) != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Failed to read request body",
+        })
+        return
+    }
+
+    if MdaCreateSchema.StateOfOperation != "" {
+        _, result := utilities.ValidateState(MdaCreateSchema.StateOfOperation)
+        if !result {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Incorrect state of origin",
+        })
+        return
+    }
+    }
+   
+
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
+        return
+    }
+
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Invalid Mda ID provided",
+        })
+        return
+    }
+
+    // get the mda
+
+    var mdaInstance Mda
+    err = config.DB.First(&mdaInstance, id).Error
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Unable to get Mda details from db",
+        })
+        return
+    }
+
+    //change the details
+    if MdaCreateSchema.RegisterName != "" {
+        mdaInstance.RegisterName = MdaCreateSchema.RegisterName
+    }
+    if MdaCreateSchema.StateOfOperation != "" {
+        mdaInstance.StateOfOperation,_ = utilities.ValidateState(MdaCreateSchema.StateOfOperation)
+    }
+    if MdaCreateSchema.Address != "" {
+        mdaInstance.Address = MdaCreateSchema.Address
+    }
+
+    err = config.DB.Save(&mdaInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the mda instance",
+            })
+            return
+        }
+
+        c.JSON(http.StatusOK, gin.H{
+            "message": "Successfully updated the record",
+        })
+
+}

@@ -106,7 +106,7 @@ func SuspendUser(c *gin.Context) {
 
 		switch user.Role {
 		case 1:
-			if (instance.Role == 2 || instance.Role ==3 || instance.Role ==4){
+			if (instance.Role == 2 || instance.Role ==3 || instance.Role ==4 ||instance.Role == 6){
 				instance.IsActive = false
 				result:= config.DB.Save(&instance)
 				if result.Error !=nil {
@@ -164,7 +164,7 @@ func SuspendUser(c *gin.Context) {
 					})
 					return
 				}
-			} else if (instance.Role ==4){	// if the instance is a student
+			} else if (instance.Role ==4 || instance.Role ==6){	// if the instance is a student
 				// get the related data to determine if the student is an mda student or stc student
 				var instanceData struct{
 					MdaId uint
@@ -252,7 +252,7 @@ func SuspendUser(c *gin.Context) {
 				return
 			}
 
-			if instance.Role != 4{
+			if instance.Role != 4 || instance.Role != 6{
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "Cannot suspend this user",
 				})
@@ -344,7 +344,7 @@ func ActivateUser(c *gin.Context) {
 
 	switch user.Role {
 	case 1:
-		if instance.Role == 2 || instance.Role ==3 || instance.Role == 4{
+		if instance.Role == 2 || instance.Role ==3 || instance.Role == 4 || instance.Role == 6{
 			instance.IsActive = true
 			result:= config.DB.Save(&instance)
 			if result.Error !=nil {
@@ -399,7 +399,7 @@ func ActivateUser(c *gin.Context) {
 				})
 				return
 			}
-		} else if (instance.Role ==4){	// if the instance is a student
+		} else if (instance.Role ==4 || instance.Role == 6){	// if the instance is a student
 			// get the related data to determine if the student is an mda student or stc student
 			var instanceData struct{
 				MdaId uint
@@ -487,7 +487,7 @@ func ActivateUser(c *gin.Context) {
 			return
 		}
 
-		if instance.Role != 4{
+		if instance.Role != 4 || instance.Role != 6{
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"message": "Cannot suspend this user",
 			})

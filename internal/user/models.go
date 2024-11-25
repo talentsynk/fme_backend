@@ -17,8 +17,6 @@ type User struct {
     OTPVerified    bool 
     Role           int             `gorm:"not null"`
     IsActive       bool            `gorm:"not null"`
-    
-
 }
 
 

@@ -5,6 +5,7 @@ import "time"
 // import "fme_backend/internal/course"
 
 var CreateStudentSchema CreateStudentSchematype
+var GraduateStudentSchema GraduateStudentSchemaType
 
 type GetAllStudentSchema struct {
     ID    uint
@@ -54,10 +55,22 @@ type CreateStudentSchematype struct {
 	Email string
 	DOBstring string
 	SID		string
-	NsqLevel	string
 	CourseID	uint
 	Address string
 	NationalIdentityNumber	string
 	LocalGovernment		string
+	IsDisabled bool
+	DisabilityName string
 
+}
+
+
+type Disability struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+
+type GraduateStudentSchemaType struct {
+	DateOfGrad string
+	NsqLevel string
 }

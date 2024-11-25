@@ -43,6 +43,9 @@ func CreateEmployer(c *gin.Context) {
         return
     }
 
+	// verify if the user is a company and verify their set their acct details
+	
+
     // Encrypt password before storing
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(CreateEmployerSchema.Password), 10)
     if err != nil {
@@ -75,6 +78,11 @@ func CreateEmployer(c *gin.Context) {
         LGA:         CreateEmployerSchema.LGA,
         UserID:      newUserID,
     }
+	if CreateEmployerSchema.IsCompany {
+		employer.IsCompany = true
+		employer.CompanyName = CreateEmployerSchema.CompanyName
+		employer.CompanyCAC = CreateEmployerSchema.CompanyCAC
+	}
 
     if err := tx.Create(&employer).Error; err != nil {
         tx.Rollback()
