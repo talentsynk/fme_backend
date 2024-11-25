@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -750,4 +751,186 @@ func DownloadStcCsv(c *gin.Context) {
             return
         }
     }
+}
+
+
+func EditStc(c *gin.Context) {
+    // get the stc id
+    idStr:= c.Param("id")
+		if idStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "path parameter not provided",
+			})
+			return
+		}
+
+    id, err := strconv.Atoi(idStr)
+
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "path parameter invalid",
+        })
+        return
+    }
+
+    // get the request body
+    if c.Bind(&StcCreateSchema) != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read request body",
+        })
+        return
+    }
+
+    // verify the user state
+    if StcCreateSchema.State != "" {
+        _, success := utilities.ValidateState(StcCreateSchema.State)
+        if !success {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Invalid state",
+            })
+            return
+        }
+    }
+
+    // get the user details and check for fme and mda
+    userIDstr,exists := c.Get("userID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get user Role
+    userRoleStr,exists := c.Get("userRole")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var stcInstance Stc
+    switch userRole {
+    case 1:   
+        //fme case
+        // get the stc instance
+        err := config.DB.First(&stcInstance, id).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Unable to fetch stc instance",
+			})
+			return
+		}
+
+        // set the new fields
+        if StcCreateSchema.Address !="" {
+            stcInstance.Address = StcCreateSchema.Address
+        }
+
+        if StcCreateSchema.Name !="" {
+            stcInstance.Name = StcCreateSchema.Name
+        }
+
+        if StcCreateSchema.State !="" {
+            stcInstance.State,_ = utilities.ValidateState(StcCreateSchema.State)
+        }
+
+
+        // save the changes
+        err = config.DB.Save(&stcInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the stc record",
+            })
+            return
+        } 
+        // send out the response - succesful
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The stc has been updated",
+        })  
+        
+        
+    case 2:
+        // get the stc mda id
+        err := config.DB.First(&stcInstance, id).Error
+        if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Unable to fetch stc instance",
+			})
+			return
+		}
+
+
+        // check the stc created at time
+        if time.Since(stcInstance.CreatedAt) > time.Hour {
+            c.JSON(http.StatusBadRequest, gin.H{
+				"message": "time to change details elapsed",
+			})
+			return
+        }
+
+
+        // get the user mda id
+        var userMdaId uint 
+        err = config.DB.Table("mdas").
+        Where("user_id = ?", userID).
+        Pluck("id",&userMdaId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        // compare them 
+        if userMdaId != stcInstance.MdaID {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "Unable to operate on this account",
+            })
+            return
+        }
+
+
+        // make the necessary changes
+        if StcCreateSchema.Address !="" {
+            stcInstance.Address = StcCreateSchema.Address
+        }
+
+        if StcCreateSchema.Name !="" {
+            stcInstance.Name = StcCreateSchema.Name
+        }
+
+        if StcCreateSchema.State !="" {
+            stcInstance.State,_ = utilities.ValidateState(StcCreateSchema.State)
+        }
+
+
+        // save the changes
+        err = config.DB.Save(&stcInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the stc record",
+            })
+            return
+        } 
+        // send out the response - succesful
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been successfully graduated",
+        })  
+
+    default:
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "Cannot perform this operation on this student",
+        }) 
+    }
+    
 }

@@ -11,6 +11,8 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -81,6 +83,15 @@ func CreateFmeStudent(c *gin.Context) {
         return
     }
 
+    if CreateStudentSchema.IsDisabled {
+        if !validateDisability(CreateStudentSchema.DisabilityName) {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Wrong disability name",
+            })
+            return
+        }
+    }
+
     // Transaction Handling
     tx := config.DB.Begin() // Begin a transaction
 
@@ -94,6 +105,9 @@ func CreateFmeStudent(c *gin.Context) {
         return
     }
 
+    
+
+
     student := Student{
         Firstname: CreateStudentSchema.Firstname,
         Lastname: CreateStudentSchema.Lastname,
@@ -104,11 +118,12 @@ func CreateFmeStudent(c *gin.Context) {
         UserID: newUserID,
         Fmestudent: true,
         SID: CreateStudentSchema.SID,
-        NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
         NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
         LocalGovernment: CreateStudentSchema.LocalGovernment,
+        IsDisabled: CreateStudentSchema.IsDisabled,
+        DisabilityName: CreateStudentSchema.DisabilityName,
     }
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
@@ -218,6 +233,15 @@ func CreateMdaStudent(c *gin.Context) {
         })
         return
     }
+
+    if CreateStudentSchema.IsDisabled {
+        if !validateDisability(CreateStudentSchema.DisabilityName) {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Wrong disability name",
+            })
+            return
+        }
+    }
     
 
     // Transaction Handling
@@ -244,12 +268,13 @@ func CreateMdaStudent(c *gin.Context) {
         MdaID: mdaID,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
         SID: CreateStudentSchema.SID,
-        NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
         LocalGovernment: CreateStudentSchema.LocalGovernment,
         NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
+        IsDisabled: CreateStudentSchema.IsDisabled,
+        DisabilityName: CreateStudentSchema.DisabilityName,
+
     }
-    fmt.Println(student)
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
         tx.Rollback() // Rollback if student creation fails
@@ -358,6 +383,15 @@ func CreateStcStudent(c *gin.Context) {
         return
     }
 
+    if CreateStudentSchema.IsDisabled {
+        if !validateDisability(CreateStudentSchema.DisabilityName) {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Wrong disability name",
+            })
+            return
+        }
+    }
+
     // Transaction Handling
     tx := config.DB.Begin() // Begin a transaction
 
@@ -381,11 +415,12 @@ func CreateStcStudent(c *gin.Context) {
         UserID: newUserID,
         StcID: stcID,
         SID: CreateStudentSchema.SID,
-        NsqLevel: CreateStudentSchema.NsqLevel,
         Address: CreateStudentSchema.Address,
         PhoneNumber: CreateStudentSchema.PhoneNumber,
         LocalGovernment: CreateStudentSchema.LocalGovernment,
         NationalIdentityNumber: CreateStudentSchema.NationalIdentityNumber,
+        IsDisabled: CreateStudentSchema.IsDisabled,
+        DisabilityName: CreateStudentSchema.DisabilityName,
     }
     studentresult := tx.Create(&student) // Create student within transaction
     if studentresult.Error != nil {
@@ -978,7 +1013,7 @@ func GetTotalStudentInfo(c *gin.Context) {
 
 
 func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
-    if len(record) < 14 {
+    if len(record) < 15 {
         return CreateStudentSchematype{}, fmt.Errorf("incorrect number of fields in the CSV record")
     }
 
@@ -1006,14 +1041,23 @@ func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
         return CreateStudentSchematype{}, fmt.Errorf("invalid phone number")
     }
 
-    courseID, err := strconv.ParseUint(record[11], 10, 32)
+    courseID, err := strconv.ParseUint(record[10], 10, 32)
     if err != nil {
-        return CreateStudentSchematype{}, fmt.Errorf("invalid course ID: %v", err)
+        return CreateStudentSchematype{}, fmt.Errorf("invalid course id: %v", err)
     }
 
     if !utilities.VeriryNINFormat(record[12]) {
-        return CreateStudentSchematype{}, fmt.Errorf("invalid NIN format: %v", err)
+        return CreateStudentSchematype{}, fmt.Errorf("invalid nin format: %v", err)
         
+    }
+    isDisabled,err := strconv.ParseBool(record[13])
+    if err != nil {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid is disabled format: %v", err)
+
+    }
+    if !validateDisability(record[14]) {
+        return CreateStudentSchematype{}, fmt.Errorf("invalid disability name: %v", err)
+
     }
 
     return CreateStudentSchematype{
@@ -1026,11 +1070,12 @@ func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
         Email:            record[6],
         PhoneNumber:      "0"+record[7],
         SID:              record[8],
-        NsqLevel:         record[9],
-        Address:          record[10],
+        Address:          record[9],
         CourseID:         uint(courseID),
-        NationalIdentityNumber: record[12],
-        LocalGovernment: record[13],
+        NationalIdentityNumber: record[11],
+        LocalGovernment: record[12],
+        IsDisabled: isDisabled,
+        DisabilityName: record[14],
     }, nil
 }
 
@@ -1060,8 +1105,9 @@ func createMdaStudentInstance(mdaID uint, schema CreateStudentSchematype,tx *gor
         MdaID:            mdaID,
         PhoneNumber:      schema.PhoneNumber,
         SID:              schema.SID,
-        NsqLevel:         schema.NsqLevel,
         Address:          schema.Address,
+        IsDisabled: schema.IsDisabled,
+        DisabilityName: CreateStudentSchema.DisabilityName,
     }
 
     if err := tx.Create(&student).Error; err != nil {
@@ -1106,8 +1152,9 @@ func createStcStudentInstance(stcID uint, schema CreateStudentSchematype,tx *gor
         StcID:            stcID,
         PhoneNumber:      schema.PhoneNumber,
         SID:              schema.SID,
-        NsqLevel:         schema.NsqLevel,
         Address:          schema.Address,
+        DisabilityName: schema.DisabilityName,
+        IsDisabled: schema.IsDisabled,
     }
 
     if err := tx.Create(&student).Error; err != nil {
@@ -1154,8 +1201,9 @@ func createFmeStudentInstance(schema CreateStudentSchematype, tx *gorm.DB) (Stud
         Fmestudent:       true,
         PhoneNumber:      schema.PhoneNumber,
         SID:              schema.SID,
-        NsqLevel:         schema.NsqLevel,
         Address:          schema.Address,
+        DisabilityName: schema.DisabilityName,
+        IsDisabled: CreateStudentSchema.IsDisabled,
     }
 
     if err := tx.Create(&student).Error; err != nil {
@@ -1641,6 +1689,22 @@ func GraduateStudent(c *gin.Context) {
         return
     }
 
+    if c.Bind(&GraduateStudentSchema) != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Failed to read request body",
+        })
+        return
+    }
+
+    // check the date
+    gradDate, err := utilities.ParseDoB(GraduateStudentSchema.DateOfGrad)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Incorrect date format",
+        })
+        return
+    }
+
     // get the user id and then figure out the permission issues
     // Get user ID
     userIDstr,exists := c.Get("userID")
@@ -1690,6 +1754,8 @@ func GraduateStudent(c *gin.Context) {
 
         // set the graduation status to true
         instance.GraduationStatus = true
+        instance.GraduationDate = gradDate
+        instance.NsqLevel = GraduateStudentSchema.NsqLevel
 
         err = config.DB.Save(&instance).Error
         if err != nil {
@@ -1769,7 +1835,10 @@ func GraduateStudent(c *gin.Context) {
             return
         }
 
+        // update the students graduation status
         instance.GraduationStatus = true
+        instance.GraduationDate = gradDate
+        instance.NsqLevel = GraduateStudentSchema.NsqLevel
 
         err = config.DB.Save(&instance).Error
         if err != nil {
@@ -1851,7 +1920,10 @@ func GraduateStudent(c *gin.Context) {
             return
         }
 
+        // update the graduation status
         instance.GraduationStatus = true
+        instance.GraduationDate = gradDate
+        instance.NsqLevel = GraduateStudentSchema.NsqLevel
 
         err = config.DB.Save(&instance).Error
         if err != nil {
@@ -1911,3 +1983,572 @@ func GraduateStudent(c *gin.Context) {
     }
  
 }
+var disabilities []Disability = []Disability{
+    {ID: 1, Name: "Blindness"},
+    {ID: 2, Name: "Low vision"},
+    {ID: 3, Name: "Color blindness"},
+    {ID: 4, Name: "Deafness"},
+    {ID: 5, Name: "Hard of hearing"},
+    {ID: 6, Name: "Amputation"},
+    {ID: 7, Name: "Cerebral palsy"},
+    {ID: 8, Name: "Muscular dystrophy"},
+    {ID: 9, Name: "Spinal cord injury"},
+    {ID: 10, Name: "Spina bifida"},
+    {ID: 11, Name: "Intellectual disability"},
+    {ID: 12, Name: "Speech impairment"},
+    {ID: 13, Name: "Language impairment"},
+    {ID: 14, Name: "Depression"},
+    {ID: 15, Name: "Anxiety"},
+    {ID: 16, Name: "Bipolar disorder"},
+    {ID: 17, Name: "Schizophrenia"},
+}
+
+func GetDisabilityList(c *gin.Context) {
+    c.JSON(http.StatusOK, disabilities)
+}
+
+func validateDisability(name string) bool {
+    for _, disability := range disabilities {
+        if strings.EqualFold(disability.Name, name) {
+            return true
+        }
+    }
+    return false
+}
+
+
+func EditStudent(c *gin.Context) {
+    // get the student id
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Mda ID is required"})
+        return
+    }
+
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "message": "Invalid Mda ID provided",
+        })
+        return
+    }
+
+    // bind the incoming schema
+    if c.ShouldBind(&CreateStudentSchema) != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Failed to read request body",
+        })
+        return
+    }
+
+    // validate the incoming data - come back to it 
+    // Data Validation
+
+    var stateOfOrigin string = ""
+    var result bool
+    var dOB time.Time
+    var stateOfResidence string = ""
+    var gender string = ""
+    if (CreateStudentSchema.StateOfOrigin != "") {
+
+        stateOfOrigin, result = utilities.ValidateState(CreateStudentSchema.StateOfOrigin)
+        if !result {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect state of origin",
+            })
+            return
+        }
+    }
+    
+    if (CreateStudentSchema.StateOfResidence != "") {
+        stateOfResidence, result = utilities.ValidateState(CreateStudentSchema.StateOfResidence)
+        if !result {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect state of residence",
+            })
+            return
+        }
+    }
+    
+    if (CreateStudentSchema.PhoneNumber != "") {
+        if !utilities.IsNigerianPhoneNumber(CreateStudentSchema.PhoneNumber){
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect phone number",
+            })
+            return
+        }
+    }
+    
+
+
+    if (CreateStudentSchema.DOBstring != "") {
+        dOB, err = utilities.ParseDoB(CreateStudentSchema.DOBstring)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect date format",
+            })
+            return
+        }
+    }
+    
+    if (CreateStudentSchema.Gender != "") {
+        gender, result = utilities.ValidateGender(CreateStudentSchema.Gender)
+        if !result {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect Gender",
+            })
+            return
+        } 
+    }
+    
+    if (CreateStudentSchema.NationalIdentityNumber != "") {
+        result = utilities.VeriryNINFormat(CreateStudentSchema.NationalIdentityNumber)
+        if !result {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Incorrect NIN format",
+            })
+            return
+        }
+    }
+    
+
+    if CreateStudentSchema.IsDisabled {
+        if !validateDisability(CreateStudentSchema.DisabilityName) {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Wrong disability name",
+            })
+            return
+        }
+    }
+
+
+    // get the user details 
+    userIDstr,exists := c.Get("userID")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userID,ok := userIDstr.(uint)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    // Get user Role
+    userRoleStr,exists := c.Get("userRole")
+    if !exists{
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user"})
+        return
+    }
+
+    userRole,ok := userRoleStr.(int)
+    if !ok {
+        c.JSON(http.StatusUnauthorized,gin.H{"message":"unauthorized user failed to convert to uint"})
+        return
+    }
+
+    var studentInstance Student
+    var studentCourseInstance StudentCourse
+    switch userRole {
+    case 1:
+        //fme case
+        // get the student instance
+        err := config.DB.First(&studentInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+        // get the student course instance
+        err = config.DB.First(&studentCourseInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+        tx := config.DB.Begin()
+
+        // set the new student fields
+        if CreateStudentSchema.Firstname != "" {
+            studentInstance.Firstname = CreateStudentSchema.Firstname
+        }
+        if CreateStudentSchema.Lastname != "" {
+            studentInstance.Lastname = CreateStudentSchema.Lastname
+        }
+        if CreateStudentSchema.Gender != "" {
+            studentInstance.Gender = gender
+        }
+
+        if CreateStudentSchema.PhoneNumber != "" {
+            studentInstance.PhoneNumber = CreateStudentSchema.PhoneNumber
+        }
+
+        if CreateStudentSchema.StateOfOrigin != "" {
+            studentInstance.StateOfOrigin = stateOfOrigin
+        }
+
+        if CreateStudentSchema.StateOfResidence != "" {
+            studentInstance.StateOfResidence = stateOfResidence
+        }
+
+        if CreateStudentSchema.DOBstring != "" {
+            studentInstance.DOB = dOB
+        }
+
+        if CreateStudentSchema.SID != "" {
+            studentInstance.SID = CreateStudentSchema.SID
+        }
+        if CreateStudentSchema.CourseID != 0 {
+            // change the student course details
+            studentCourseInstance.CourseID = CreateStudentSchema.CourseID
+        }
+
+        if CreateStudentSchema.Address != "" {
+            studentInstance.Address = CreateStudentSchema.Address
+        }
+
+        if CreateStudentSchema.NationalIdentityNumber != "" {
+            studentInstance.NationalIdentityNumber = CreateStudentSchema.NationalIdentityNumber
+        }
+
+        if CreateStudentSchema.LocalGovernment != "" {
+            studentInstance.LocalGovernment = CreateStudentSchema.LocalGovernment
+        }
+
+        if CreateStudentSchema.IsDisabled {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+            studentInstance.DisabilityName = CreateStudentSchema.DisabilityName
+        } else {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+        }
+        
+
+
+        // save the new fields
+        err = tx.Save(&studentInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student record",
+            })
+            return
+        } 
+
+        err = tx.Save(&studentCourseInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student course record",
+            })
+            return
+        } 
+
+        tx.Commit()
+
+        // decide the new 
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been updated",
+        })  
+
+    case 2: // mda case
+        // get the mda id 
+        var userMdaId uint 
+        err := config.DB.Table("mdas").
+        Where("user_id = ?", userID).
+        Pluck("id",&userMdaId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        // get the student and the student course
+        err = config.DB.First(&studentInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+        // get the student course instance
+        err = config.DB.First(&studentCourseInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+
+        // verify if the student has the same mda id and make the changes
+        if userMdaId != studentInstance.MdaID {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "time limit for changes exceeded",
+            })
+            return
+        }
+
+        // verify if the student can still be operated on 
+        if time.Since(studentInstance.CreatedAt) > time.Hour {
+            c.JSON(http.StatusBadRequest, gin.H{
+				"message": "time to change details elapsed",
+			})
+			return
+        }
+
+        // make the changes 
+        tx := config.DB.Begin()
+
+        // set the new student fields
+        if CreateStudentSchema.Firstname != "" {
+            studentInstance.Firstname = CreateStudentSchema.Firstname
+        }
+        if CreateStudentSchema.Lastname != "" {
+            studentInstance.Lastname = CreateStudentSchema.Lastname
+        }
+        if CreateStudentSchema.Gender != "" {
+            studentInstance.Gender = gender
+        }
+
+        if CreateStudentSchema.PhoneNumber != "" {
+            studentInstance.PhoneNumber = CreateStudentSchema.PhoneNumber
+        }
+
+        if CreateStudentSchema.StateOfOrigin != "" {
+            studentInstance.StateOfOrigin = stateOfOrigin
+        }
+
+        if CreateStudentSchema.StateOfResidence != "" {
+            studentInstance.StateOfResidence = stateOfResidence
+        }
+
+        if CreateStudentSchema.DOBstring != "" {
+            studentInstance.DOB = dOB
+        }
+
+        if CreateStudentSchema.SID != "" {
+            studentInstance.SID = CreateStudentSchema.SID
+        }
+        if CreateStudentSchema.CourseID != 0 {
+            // change the student course details
+            studentCourseInstance.CourseID = CreateStudentSchema.CourseID
+        }
+
+        if CreateStudentSchema.Address != "" {
+            studentInstance.Address = CreateStudentSchema.Address
+        }
+
+        if CreateStudentSchema.NationalIdentityNumber != "" {
+            studentInstance.NationalIdentityNumber = CreateStudentSchema.NationalIdentityNumber
+        }
+
+        if CreateStudentSchema.LocalGovernment != "" {
+            studentInstance.LocalGovernment = CreateStudentSchema.LocalGovernment
+        }
+
+        if CreateStudentSchema.IsDisabled {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+            studentInstance.DisabilityName = CreateStudentSchema.DisabilityName
+        } else {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+        }
+        
+
+
+        // save the new fields
+        err = tx.Save(&studentInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student record",
+            })
+            return
+        } 
+
+        err = tx.Save(&studentCourseInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student course record",
+            })
+            return
+        } 
+
+        tx.Commit()
+
+        // decide the new 
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been updated",
+        }) 
+
+    case 3:
+        // get the mda id 
+        var userStcId uint 
+        err := config.DB.Table("stcs").
+        Where("user_id = ?", userID).
+        Pluck("id",&userStcId).Error
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "message": "MdaAccount has issues",
+            })
+            return
+        }
+
+        // get the student and the student course
+        err = config.DB.First(&studentInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+        // get the student course instance
+        err = config.DB.First(&studentCourseInstance, id).Error
+        if err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Unable to fetch student instance",
+            })
+            return
+        }
+
+
+        // verify if the student has the same mda id and make the changes
+        if userStcId != studentInstance.StcID {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "time limit for changes exceeded",
+            })
+            return
+        }
+
+        // verify if the student can still be operated on 
+        if time.Since(studentInstance.CreatedAt) > time.Hour {
+            c.JSON(http.StatusBadRequest, gin.H{
+				"message": "time to change details elapsed",
+			})
+			return
+        }
+
+        // make the changes 
+        tx := config.DB.Begin()
+
+        // set the new student fields
+        if CreateStudentSchema.Firstname != "" {
+            studentInstance.Firstname = CreateStudentSchema.Firstname
+        }
+        if CreateStudentSchema.Lastname != "" {
+            studentInstance.Lastname = CreateStudentSchema.Lastname
+        }
+        if CreateStudentSchema.Gender != "" {
+            studentInstance.Gender = gender
+        }
+
+        if CreateStudentSchema.PhoneNumber != "" {
+            studentInstance.PhoneNumber = CreateStudentSchema.PhoneNumber
+        }
+
+        if CreateStudentSchema.StateOfOrigin != "" {
+            studentInstance.StateOfOrigin = stateOfOrigin
+        }
+
+        if CreateStudentSchema.StateOfResidence != "" {
+            studentInstance.StateOfResidence = stateOfResidence
+        }
+
+        if CreateStudentSchema.DOBstring != "" {
+            studentInstance.DOB = dOB
+        }
+
+        if CreateStudentSchema.SID != "" {
+            studentInstance.SID = CreateStudentSchema.SID
+        }
+        if CreateStudentSchema.CourseID != 0 {
+            // change the student course details
+            studentCourseInstance.CourseID = CreateStudentSchema.CourseID
+        }
+
+        if CreateStudentSchema.Address != "" {
+            studentInstance.Address = CreateStudentSchema.Address
+        }
+
+        if CreateStudentSchema.NationalIdentityNumber != "" {
+            studentInstance.NationalIdentityNumber = CreateStudentSchema.NationalIdentityNumber
+        }
+
+        if CreateStudentSchema.LocalGovernment != "" {
+            studentInstance.LocalGovernment = CreateStudentSchema.LocalGovernment
+        }
+
+        if CreateStudentSchema.IsDisabled {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+            studentInstance.DisabilityName = CreateStudentSchema.DisabilityName
+        } else {
+            studentInstance.IsDisabled = CreateStudentSchema.IsDisabled
+        }
+        
+
+
+        // save the new fields
+        err = tx.Save(&studentInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student record",
+            })
+            return
+        } 
+
+        err = tx.Save(&studentCourseInstance).Error
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "Unable to update the student course record",
+            })
+            return
+        } 
+
+        tx.Commit()
+
+        // decide the new 
+        c.JSON(http.StatusOK, gin.H{
+            "message": "The student has been updated",
+        })
+    default:
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "message": "You are unable to perform this action",
+        })
+
+    }
+}
+
+func GetStudentStatisticsByState(c *gin.Context) {
+    var results []struct {
+        StateOfResidence string
+        EnrolledStudent    int64
+        GraduatedStudent  int64
+    }
+
+    // Query to calculate enrolled and graduated students grouped by state of residence
+    err := config.DB.Table("students").
+        Select("state_of_residence, "+
+            "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_count, "+
+            "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_count").
+        Group("state_of_residence").
+        Scan(&results).Error
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "message": "Failed to retrieve statistics",
+            "error":   err.Error(),
+        })
+        return
+    }
+
+    // Success response
+    c.JSON(http.StatusOK, gin.H{
+        "message":"Geographical distribution by state of residence retrieved successfully",
+        "data":    results,
+    })
+}
+
