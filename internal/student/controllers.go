@@ -1357,7 +1357,7 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
             return
         }
 
-        // Create user and student instances
+     
         student, err := createFmeStudentInstance(studentSchema,tx)
         if err != nil {
             tx.Rollback()
@@ -2559,7 +2559,7 @@ func GetStudentStatisticsByState(c *gin.Context) {
 
 
 
-    // Query to calculate enrolled and graduated students grouped by state of residence
+ 
     var err error
     switch userRole {
     case 1:
@@ -2624,7 +2624,6 @@ func GetStudentStatisticsByState(c *gin.Context) {
     }
 
    
-    // Success response
     c.JSON(http.StatusOK, gin.H{
         "residence-distribution": results,
     })
