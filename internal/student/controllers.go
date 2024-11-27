@@ -1357,7 +1357,7 @@ func CreateFmeStudentFromCsv(c *gin.Context) {
             return
         }
 
-        // Create user and student instances
+     
         student, err := createFmeStudentInstance(studentSchema,tx)
         if err != nil {
             tx.Rollback()
@@ -2522,6 +2522,7 @@ func EditStudent(c *gin.Context) {
     }
 }
 
+
 func GetStudentStatisticsByState(c *gin.Context) {
     // Get user ID from context
     userIDstr, exists := c.Get("userID")
@@ -2555,15 +2556,17 @@ func GetStudentStatisticsByState(c *gin.Context) {
         GraduatedStudent int64
     }
 
-    // Query to calculate enrolled and graduated students grouped by state of residence
+
+
+ 
     var err error
     switch userRole {
     case 1:
         // Admin or superuser: no filtering by user ID
         err = config.DB.Table("students").
             Select("state_of_residence, "+
-                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_count, "+
-                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_count").
+                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_student, "+
+                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Group("state_of_residence").
             Scan(&results).Error
 
@@ -2580,8 +2583,8 @@ func GetStudentStatisticsByState(c *gin.Context) {
 
         err = config.DB.Table("students").
             Select("state_of_residence, "+
-                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_count, "+
-                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_count").
+                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_student, "+
+                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Where("students.mda_id = ?", userMdaId).
             Group("state_of_residence").
             Scan(&results).Error
@@ -2600,8 +2603,8 @@ func GetStudentStatisticsByState(c *gin.Context) {
 
         err = config.DB.Table("students").
             Select("state_of_residence, "+
-                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_count, "+
-                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_count").
+                "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_student, "+
+                "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Where("students.stc_id = ?", userStcId).
             Group("state_of_residence").
             Scan(&results).Error
@@ -2619,9 +2622,8 @@ func GetStudentStatisticsByState(c *gin.Context) {
         return
     }
 
-    // Success response
+   
     c.JSON(http.StatusOK, gin.H{
-        "residence-distribution":    results,
+        "residence-distribution": results,
     })
 }
-
