@@ -1,19 +1,19 @@
 package config
 
 import (
-	        //   "log"
+	    //  "log"
 	        "os"
-                // "github.com/joho/godotenv"
-           
+            //  "github.com/joho/godotenv"
+
 )
 
 type Config struct {
-	// Configuration Variables
+	//  Configuration Variables
 	DatabaseURL string
 	HashSecret  string
 }
 
-var AppConfig *Config
+// var AppConfig *Config
 
 // func init() {
 // 	//   Load .env file
