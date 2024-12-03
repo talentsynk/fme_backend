@@ -1046,7 +1046,7 @@ func parseAndValidateRecord(record []string) (CreateStudentSchematype, error) {
         return CreateStudentSchematype{}, fmt.Errorf("invalid course id: %v", err)
     }
 
-    if !utilities.VeriryNINFormat(record[12]) {
+    if !utilities.VeriryNINFormat(record[11]) {
         return CreateStudentSchematype{}, fmt.Errorf("invalid nin format: %v", err)
         
     }

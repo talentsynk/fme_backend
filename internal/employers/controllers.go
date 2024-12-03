@@ -109,7 +109,7 @@ func GetAllEmployer(c *gin.Context){
 	var employers []GetEmployerSchema
 
 	if result := config.DB.Table("employers").
-	Select("id, first_name, last_name, phone_number, nin, state, lga, user_id").
+	Select("id, first_name, last_name, phone_number, nin, state, lga, user_id,is_company, company_name").
 	Find(&employers); result.Error != nil{
 		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()});
 	     return
@@ -140,10 +140,12 @@ func GetEmployer(c *gin.Context) {
 		LastName    string
 		Email       string
 		PhoneNumber string
+		IsCompany	bool
+		CompanyName string
 	}
 	
 	err := config.DB.Table("employers").
-		Select("employers.id, employers.first_name, employers.last_name, users.email, employers.phone_number").
+		Select("employers.id, employers.first_name, employers.last_name,employers.is_company, employers.company_name, users.email, employers.phone_number").
 		Joins("JOIN users ON users.id = employers.user_id").
 		Where("employers.id = ?", employerID).
 		First(&result).Error
@@ -175,10 +177,12 @@ func GetEmployerByID(c *gin.Context){
 		LastName    string
 		Email       string
 		PhoneNumber string
+		IsCompany	bool
+		CompanyName string
 	}
 	
 	err = config.DB.Table("employers").
-		Select("employers.id, employers.first_name, employers.last_name, users.email, employers.phone_number").
+		Select("employers.id, employers.first_name, employers.last_name, employers.is_company, employers.company_name, users.email, employers.phone_number").
 		Joins("JOIN users ON users.id = employers.user_id").
 		Where("employers.id = ?", employerID).
 		First(&result).Error

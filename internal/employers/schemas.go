@@ -26,6 +26,8 @@ type GetEmployerSchema struct {
     State       string   
     LGA         string   
     UserId      uint  
+    IsCompany   bool
+    CompanyName string
 }    
 
 
