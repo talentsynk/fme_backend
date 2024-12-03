@@ -2523,7 +2523,6 @@ func EditStudent(c *gin.Context) {
 }
 
 
-
 func GetStudentStatisticsByState(c *gin.Context) {
     // Get user ID from context
     userIDstr, exists := c.Get("userID")
