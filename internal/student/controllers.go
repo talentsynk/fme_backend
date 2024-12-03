@@ -2569,6 +2569,7 @@ func GetStudentStatisticsByState(c *gin.Context) {
                 "COUNT(CASE WHEN graduation_status = false THEN 1 END) as enrolled_student, "+
                 "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Group("state_of_residence").
+            Order("enrolled_student DESC, graduated_student DESC").
             Scan(&results).Error
 
     case 2:
@@ -2588,6 +2589,7 @@ func GetStudentStatisticsByState(c *gin.Context) {
                 "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Where("students.mda_id = ?", userMdaId).
             Group("state_of_residence").
+            Order("enrolled_student DESC, graduated_student DESC").
             Scan(&results).Error
 
     case 3:
@@ -2608,6 +2610,7 @@ func GetStudentStatisticsByState(c *gin.Context) {
                 "COUNT(CASE WHEN graduation_status = true THEN 1 END) as graduated_student").
             Where("students.stc_id = ?", userStcId).
             Group("state_of_residence").
+            Order("enrolled_student DESC, graduated_student DESC").
             Scan(&results).Error
 
     default:
