@@ -894,6 +894,7 @@ func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint)
   
 	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
+		fmt.Println(result.Error)
 	  return false, "failed to create user", 0
 	}
   

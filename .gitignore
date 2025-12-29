@@ -30,6 +30,4 @@ go.work
 # db files
 *.db
 
-dockerfile
-
 *.sh

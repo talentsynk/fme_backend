@@ -1,10 +1,9 @@
 package config
 
 import (
-	    //  "log"
-	        "os"
-            //  "github.com/joho/godotenv"
-
+	//  "log"
+	"os"
+	//  "github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -38,7 +37,7 @@ func GetHashSecret() string {
 }
 
 func GetResendSecret() string {
-    return os.Getenv("RESEND_SECRET")
+	return os.Getenv("RESEND_SECRET")
 }
 
 func GetEnvType() string {
@@ -46,11 +45,11 @@ func GetEnvType() string {
 }
 
 func GetFmePassWord() string {
-	return os.Getenv("FME_PASSWORD")
+	return "Pass123*"
 }
 
 func GetFmeEmail() string {
-	return os.Getenv("FME_EMAIL")
+	return "fme.testing@gmail.com"
 }
 
 func GetSendMailAcctToken() string {

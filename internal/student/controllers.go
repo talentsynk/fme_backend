@@ -105,9 +105,6 @@ func CreateFmeStudent(c *gin.Context) {
         return
     }
 
-    
-
-
     student := Student{
         Firstname: CreateStudentSchema.Firstname,
         Lastname: CreateStudentSchema.Lastname,

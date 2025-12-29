@@ -67,7 +67,6 @@ type CreateStudentSchematype struct {
 	LocalGovernment		string
 	IsDisabled bool
 	DisabilityName string
-
 }
 
 

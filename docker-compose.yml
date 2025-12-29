@@ -1,0 +1,41 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: fme_db_testing
+    restart: always
+    environment:
+      POSTGRES_USER: fme_user
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: fme_db_backend
+    volumes:
+      - pg_data_test:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fme_user -d fme_db_backend"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: fme_backend_testing
+    restart: on-failure
+    ports:
+      - "80:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://fme_user:secure_password_123@db:5432/fme_db_backend?sslmode=disable
+      ENV_TYPE: testing
+      HASH_SECRET: b21c91b2ab9f6218ce94ee072c43298cb28a
+      FME_PASSWORD: Pass123*
+      FME_EMAIL: fme.testing@gmail.com
+      PM_SERVER_TOKEN: c209741a-e135-4f9c-8591-9a7f56347144
+      PM_ACCT_TOKEN: 178aab19-a495-4196-9703-b3dd9d2cdb7f
+      HOME_MAIL: skillsdbproject@coderina.org
+    command: sh -c "./migrate && ./server"
+
+volumes:
+  pg_data_test:

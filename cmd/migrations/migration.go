@@ -35,7 +35,5 @@ func main() {
 		&job.JobApplicationRating{},
 		&artisans.Artisans{},
 		&middleware.RequestLog{},
-
-
 	)
 }

@@ -60,5 +60,6 @@ func CreateFmeAtStart() {
 	if err != nil {
 		fmt.Println("Error creating Fme object in db")
 		return
-	}	
+	}
+	
 }
