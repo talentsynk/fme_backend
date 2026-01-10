@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-var StcCreateSchema  struct {
+type StcCreateSchemaType  struct {
 	Name                         string 
 	Email                        string 
 	Address                      string  

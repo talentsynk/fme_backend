@@ -35,7 +35,6 @@ func CreateFmeUser(c *gin.Context) {
 		})
 		return
 	}
-	
 
 	// Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(UserCreateSchema.Password), 10)
@@ -47,12 +46,12 @@ func CreateFmeUser(c *gin.Context) {
 	}
 
 	// setup the user create instance
-	user:= User{
-		Email: UserCreateSchema.Email,
-		Password: string(hash),
+	user := User{
+		Email:        UserCreateSchema.Email,
+		Password:     string(hash),
 		OTPExpiresAt: time.Now(),
-		Role:1,
-		IsActive: true,
+		Role:         1,
+		IsActive:     true,
 	}
 
 	result := config.DB.Create(&user)
@@ -66,50 +65,160 @@ func CreateFmeUser(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "User created successfully"})
 }
 
-//Suspend the user
+// Suspend the user
 func SuspendUser(c *gin.Context) {
-		// Receive the part parameter.
-		id:= c.Param("id")
-		if id == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "path parameter not provided",
-			})
+	// Receive the part parameter.
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "path parameter not provided",
+		})
+		return
+	}
+
+	// get the instance
+	var instance User
+	instance_result := config.DB.First(&instance, id)
+	if instance_result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "instance does not exist",
+		})
+		return
+	}
+
+	// get the user and confirm permission
+	userId, userexists := c.Get("userID")
+	if !userexists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with the authorization token",
+		})
+	}
+
+	var user User
+	user_result := config.DB.First(&user, userId)
+	if user_result.Error != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Problem with authorization token",
+		})
+		return
+	}
+
+	switch user.Role {
+	case 1:
+		if instance.Role == 2 || instance.Role == 3 || instance.Role == 4 || instance.Role == 6 {
+			instance.IsActive = false
+			result := config.DB.Save(&instance)
+			if result.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Unable to update the user record",
+				})
+				return
+			}
+			c.JSON(200, gin.H{"message": "User suspended successfully"})
+			return
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid role for suspending user"})
 			return
 		}
 
-		// get the instance  
-		var instance User
-		instance_result := config.DB.First(&instance, id)
-		if instance_result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "instance does not exist",
-			})
-			return
-		}
-
-		// get the user and confirm permission
-		userId ,userexists := c.Get("userID")
-		if !userexists {
+	case 2:
+		// Get user MDA ID
+		var userMdaId uint
+		err := config.DB.Table("mdas").
+			Where("user_id = ?", user.ID).
+			Pluck("id", &userMdaId).Error
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Problem with the authorization token",
-			})
-		}
-
-		var user User
-		user_result := config.DB.First(&user, userId)
-		if user_result.Error != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Problem with authorization token",
+				"message": "MdaAccount has issues",
 			})
 			return
 		}
-
-		switch user.Role {
-		case 1:
-			if (instance.Role == 2 || instance.Role ==3 || instance.Role ==4 ||instance.Role == 6){
+		//if the instance is an stc
+		if instance.Role == 3 {
+			//get the related mda id
+			var insanceMdaId uint
+			err := config.DB.Table("stcs").Pluck("mda_id", &insanceMdaId).Error
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "MdaAccount has issues",
+				})
+				return
+			}
+			// compare if the instance is an stc under the user
+			if insanceMdaId == userMdaId {
 				instance.IsActive = false
-				result:= config.DB.Save(&instance)
-				if result.Error !=nil {
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"message": "Cannot suspend this user",
+					})
+					return
+				}
+				c.JSON(200, gin.H{"message": "User suspended successfully"})
+				return
+			} else { //if not return unauthorized
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "Cannot suspend this user",
+				})
+				return
+			}
+		} else if instance.Role == 4 || instance.Role == 6 { // if the instance is a student
+			// get the related data to determine if the student is an mda student or stc student
+			var instanceData struct {
+				MdaId uint
+				StcId uint
+			}
+			err := config.DB.Table("students").
+				Select("mda_id, stc_id").
+				Where("user_id = ?", instance.ID).
+				Scan(&instanceData).Error
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "cannot get the instance data",
+				})
+				return
+			}
+			fmt.Println(instanceData)
+			if instanceData.MdaId != 0 { // if this is the student is under an mda directly - Mda student
+				if userMdaId != instanceData.MdaId { // check if this student is under the authenticated mda
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "cannot get the instance data",
+					})
+					return
+				}
+				instance.IsActive = false // deactivate the user
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"message": "Unable to update the user record",
+					})
+					return
+				}
+				c.JSON(200, gin.H{"message": "User suspended successfully"})
+				return
+			} else if instanceData.StcId != 0 { // if the student is an stc student
+				var insatnceStcMdaId uint // get the related mda id
+
+				err := config.DB.Table("stcs").
+					Where("id = ?", instanceData.StcId).
+					Select("mda_id").
+					Scan(&insatnceStcMdaId).Error
+				if err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{
+						"message": "Unable to update the user record",
+					})
+					return
+				}
+
+				if insatnceStcMdaId != userMdaId { // check if the student is under the authenticated mda
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "Unable to suspend this user",
+					})
+					return
+				}
+				instance.IsActive = false //deactivate the student
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"message": "Unable to update the user record",
 					})
@@ -118,156 +227,38 @@ func SuspendUser(c *gin.Context) {
 				c.JSON(200, gin.H{"message": "User suspended successfully"})
 				return
 			} else {
-				c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid role for suspending user"})
-				return
-			}
-			
-			
-		case 2:
-			// Get user MDA ID
-			var userMdaId uint 
-			err := config.DB.Table("mdas").
-			Where("user_id = ?", user.ID).
-			Pluck("id",&userMdaId).Error
-			if err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{
-					"message": "MdaAccount has issues",
-				})
-				return
-			}
-			//if the instance is an stc
-			if instance.Role == 3 {
-				//get the related mda id
-				var insanceMdaId uint 
-				err := config.DB.Table("stcs").Pluck("mda_id",&insanceMdaId).Error
-				if err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{
-						"message": "MdaAccount has issues",
-					})
-					return
-				}
-				// compare if the instance is an stc under the user
-				if (insanceMdaId == userMdaId) {
-					instance.IsActive = false
-					result:= config.DB.Save(&instance)
-					if result.Error !=nil {
-						c.JSON(http.StatusBadRequest, gin.H{
-							"message": "Cannot suspend this user",
-						})
-						return
-					}
-					c.JSON(200, gin.H{"message": "User suspended successfully"})
-					return
-				} else {	//if not return unauthorized
-					c.JSON(http.StatusUnauthorized, gin.H{
-						"message": "Cannot suspend this user",
-					})
-					return
-				}
-			} else if (instance.Role ==4 || instance.Role ==6){	// if the instance is a student
-				// get the related data to determine if the student is an mda student or stc student
-				var instanceData struct{
-					MdaId uint
-					StcId uint
-				}
-				err := config.DB.Table("students").
-				Select("mda_id, stc_id").
-				Where("user_id = ?", instance.ID).
-				Scan(&instanceData).Error
-				if err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{
-						"message": "cannot get the instance data",
-					})
-					return
-				}
-				fmt.Println(instanceData)
-				if instanceData.MdaId != 0 {	// if this is the student is under an mda directly - Mda student
-					if userMdaId != instanceData.MdaId { // check if this student is under the authenticated mda
-							c.JSON(http.StatusUnauthorized, gin.H{
-								"message": "cannot get the instance data",
-							})
-							return
-						}
-					instance.IsActive = false	// deactivate the user
-					result:= config.DB.Save(&instance)
-					if result.Error !=nil {
-						c.JSON(http.StatusBadRequest, gin.H{
-							"message": "Unable to update the user record",
-						})
-						return
-					}
-					c.JSON(200, gin.H{"message": "User suspended successfully"})
-					return
-				} else if instanceData.StcId != 0 {	// if the student is an stc student
-					var insatnceStcMdaId uint	// get the related mda id 
-
-					err := config.DB.Table("stcs").
-					Where("id = ?", instanceData.StcId).
-					Select("mda_id").
-					Scan(&insatnceStcMdaId).Error
-					if err != nil {
-						c.JSON(http.StatusBadRequest, gin.H{
-							"message": "Unable to update the user record",
-						})
-						return
-					}
-
-					if insatnceStcMdaId != userMdaId {	// check if the student is under the authenticated mda
-						c.JSON(http.StatusUnauthorized, gin.H{
-							"message": "Unable to suspend this user",
-						})
-						return
-					}
-					instance.IsActive = false	//deactivate the student
-					result:= config.DB.Save(&instance)
-					if result.Error !=nil {
-						c.JSON(http.StatusInternalServerError, gin.H{
-							"message": "Unable to update the user record",
-						})
-						return
-					}
-					c.JSON(200, gin.H{"message": "User suspended successfully"})
-					return
-				} else {
-					c.JSON(http.StatusUnauthorized, gin.H{
-						"message": "Cannot suspend this user",
-					})
-					return
-				}
-
-			}
-
-		case 3:
-			//get user stcid
-			var userStcId uint
-			err := config.DB.
-					Table("stcs").
-					Select("id").
-					Where("user_id = ?", user.ID).
-					Scan(&userStcId).Error
-			if err != nil{
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"message": "Error trying to suspend this user",
-				})
-				return
-			}
-
-			if instance.Role != 4 || instance.Role != 6{
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "Cannot suspend this user",
 				})
 				return
 			}
 
-			// get student stc id
+		}
+
+	case 3:
+		//get user stcid
+		var userStcId uint
+		err := config.DB.
+			Table("stcs").
+			Select("id").
+			Where("user_id = ?", user.ID).
+			Scan(&userStcId).Error
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Error trying to suspend this user",
+			})
+			return
+		}
+
+		if instance.Role == 4 || instance.Role == 6 {
 			var studentStcId uint
 			nerr := config.DB.
-					Table("students").
-					Select("stc_id").
-					Where("user_id = ?", instance.ID).
-					Scan(&studentStcId).Error
+				Table("students").
+				Select("stc_id").
+				Where("user_id = ?", instance.ID).
+				Scan(&studentStcId).Error
 
-			if nerr != nil{
+			if nerr != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"message": "Error trying to suspend this user",
 				})
@@ -275,16 +266,16 @@ func SuspendUser(c *gin.Context) {
 			}
 
 			//check if student is under this stc
-			if (studentStcId != userStcId) {
-				c.JSON(http.StatusUnauthorized,gin.H{
+			if studentStcId != userStcId {
+				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "Unable to suspend this user",
 				})
 				return
 			}
 
-			instance.IsActive = false	//deactivate the student
-			result:= config.DB.Save(&instance)
-			if result.Error !=nil {
+			instance.IsActive = false //deactivate the student
+			result := config.DB.Save(&instance)
+			if result.Error != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"message": "Unable to update the user record",
 				})
@@ -292,21 +283,25 @@ func SuspendUser(c *gin.Context) {
 			}
 			c.JSON(200, gin.H{"message": "User suspended successfully"})
 			return
-			
-	
-
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": "Unable to update the user record",
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Cannot suspend this user",
 			})
 			return
 		}
+
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Unable to update the user record",
+		})
+		return
 	}
+}
 
 // Activate User
 func ActivateUser(c *gin.Context) {
 	// Receive the part parameter.
-	id:= c.Param("id")
+	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "path parameter not provided",
@@ -314,7 +309,7 @@ func ActivateUser(c *gin.Context) {
 		return
 	}
 
-	// get the instance  
+	// get the instance
 	var instance User
 	instance_result := config.DB.First(&instance, id)
 	if instance_result.Error != nil {
@@ -325,7 +320,7 @@ func ActivateUser(c *gin.Context) {
 	}
 
 	// get the user and confirm permission
-	userId ,userexists := c.Get("userID")
+	userId, userexists := c.Get("userID")
 	if !userexists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"message": "Problem with the authorization token",
@@ -344,10 +339,10 @@ func ActivateUser(c *gin.Context) {
 
 	switch user.Role {
 	case 1:
-		if instance.Role == 2 || instance.Role ==3 || instance.Role == 4 || instance.Role == 6{
+		if instance.Role == 2 || instance.Role == 3 || instance.Role == 4 || instance.Role == 6 {
 			instance.IsActive = true
-			result:= config.DB.Save(&instance)
-			if result.Error !=nil {
+			result := config.DB.Save(&instance)
+			if result.Error != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"message": "Unable to update the user record",
 				})
@@ -360,10 +355,10 @@ func ActivateUser(c *gin.Context) {
 
 	case 2:
 		// Get user MDA ID
-		var userMdaId uint 
+		var userMdaId uint
 		err := config.DB.Table("mdas").
-		Where("user_id = ?", user.ID).
-		Pluck("id",&userMdaId).Error
+			Where("user_id = ?", user.ID).
+			Pluck("id", &userMdaId).Error
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"message": "MdaAccount has issues",
@@ -373,8 +368,8 @@ func ActivateUser(c *gin.Context) {
 		//if the instance is an stc
 		if instance.Role == 3 {
 			//get the related mda id
-			var insanceMdaId uint 
-			err := config.DB.Table("stcs").Pluck("mda_id",&insanceMdaId).Error
+			var insanceMdaId uint
+			err := config.DB.Table("stcs").Pluck("mda_id", &insanceMdaId).Error
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "MdaAccount has issues",
@@ -382,10 +377,10 @@ func ActivateUser(c *gin.Context) {
 				return
 			}
 			// compare if the instance is an stc under the user
-			if (insanceMdaId == userMdaId) {
+			if insanceMdaId == userMdaId {
 				instance.IsActive = true
-				result:= config.DB.Save(&instance)
-				if result.Error !=nil {
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"message": "Cannot suspend this user",
 					})
@@ -393,22 +388,22 @@ func ActivateUser(c *gin.Context) {
 				}
 				c.JSON(200, gin.H{"message": "User reactivated successfully"})
 				return
-			} else {	//if not return unauthorized
+			} else { //if not return unauthorized
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "Cannot suspend this user",
 				})
 				return
 			}
-		} else if (instance.Role ==4 || instance.Role == 6){	// if the instance is a student
+		} else if instance.Role == 4 || instance.Role == 6 { // if the instance is a student
 			// get the related data to determine if the student is an mda student or stc student
-			var instanceData struct{
+			var instanceData struct {
 				MdaId uint
 				StcId uint
 			}
 			err := config.DB.Table("students").
-			Select("mda_id, stc_id").
-			Where("user_id = ?", instance.ID).
-			Scan(&instanceData).Error
+				Select("mda_id, stc_id").
+				Where("user_id = ?", instance.ID).
+				Scan(&instanceData).Error
 			if err != nil {
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"message": "cannot get the instance data",
@@ -416,16 +411,16 @@ func ActivateUser(c *gin.Context) {
 				return
 			}
 			fmt.Println(instanceData)
-			if instanceData.MdaId != 0 {	// if this is the student is under an mda directly - Mda student
+			if instanceData.MdaId != 0 { // if this is the student is under an mda directly - Mda student
 				if userMdaId != instanceData.MdaId { // check if this student is under the authenticated mda
-						c.JSON(http.StatusUnauthorized, gin.H{
-							"message": "cannot get the instance data",
-						})
-						return
-					}
-				instance.IsActive = true	// deactivate the user
-				result:= config.DB.Save(&instance)
-				if result.Error !=nil {
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"message": "cannot get the instance data",
+					})
+					return
+				}
+				instance.IsActive = true // deactivate the user
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"message": "Unable to update the user record",
 					})
@@ -433,13 +428,13 @@ func ActivateUser(c *gin.Context) {
 				}
 				c.JSON(200, gin.H{"message": "User reactivated successfully"})
 				return
-			} else if instanceData.StcId != 0 {	// if the student is an stc student
-				var insatnceStcMdaId uint	// get the related mda id 
+			} else if instanceData.StcId != 0 { // if the student is an stc student
+				var insatnceStcMdaId uint // get the related mda id
 
 				err := config.DB.Table("stcs").
-				Where("id = ?", instanceData.StcId).
-				Select("mda_id").
-				Scan(&insatnceStcMdaId).Error
+					Where("id = ?", instanceData.StcId).
+					Select("mda_id").
+					Scan(&insatnceStcMdaId).Error
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{
 						"message": "Unable to update the user record",
@@ -447,15 +442,15 @@ func ActivateUser(c *gin.Context) {
 					return
 				}
 
-				if insatnceStcMdaId != userMdaId {	// check if the student is under the authenticated mda
+				if insatnceStcMdaId != userMdaId { // check if the student is under the authenticated mda
 					c.JSON(http.StatusUnauthorized, gin.H{
 						"message": "Unable to suspend this user",
 					})
 					return
 				}
-				instance.IsActive = true	//deactivate the student
-				result:= config.DB.Save(&instance)
-				if result.Error !=nil {
+				instance.IsActive = true //deactivate the student
+				result := config.DB.Save(&instance)
+				if result.Error != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{
 						"message": "Unable to update the user record",
 					})
@@ -476,58 +471,59 @@ func ActivateUser(c *gin.Context) {
 		//get user stcid
 		var userStcId uint
 		err := config.DB.
-				Table("stcs").
-				Select("id").
-				Where("user_id = ?", user.ID).
-				Scan(&userStcId).Error
-		if err != nil{
+			Table("stcs").
+			Select("id").
+			Where("user_id = ?", user.ID).
+			Scan(&userStcId).Error
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Error trying to suspend this user",
+				"message": "Error trying to activate this user",
 			})
 			return
 		}
 
-		if instance.Role != 4 || instance.Role != 6{
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"message": "Cannot suspend this user",
-			})
-			return
-		}
-
-		// get student stc id
-		var studentStcId uint
-		nerr := config.DB.
+		if instance.Role == 4 || instance.Role == 6 {
+			var studentStcId uint
+			nerr := config.DB.
 				Table("students").
 				Select("stc_id").
 				Where("user_id = ?", instance.ID).
 				Scan(&studentStcId).Error
 
-		if nerr != nil{
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Error trying to suspend this user",
+			if nerr != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Error trying to avtivate this user",
+				})
+				return
+			}
+
+			//check if student is under this stc
+			if studentStcId != userStcId {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"message": "Unable to activate this user",
+				})
+				return
+			}
+
+			instance.IsActive = true //deactivate the student
+			result := config.DB.Save(&instance)
+			if result.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "Unable to update the user record",
+				})
+				return
+			}
+			c.JSON(200, gin.H{"message": "User reactivated successfully"})
+			return
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Cannot activate this user",
 			})
 			return
 		}
 
-		//check if student is under this stc
-		if (studentStcId != userStcId) {
-			c.JSON(http.StatusUnauthorized,gin.H{
-				"message": "Unable to suspend this user",
-			})
-			return
-		}
+		// get student stc id
 
-		instance.IsActive = true	//deactivate the student
-		result:= config.DB.Save(&instance)
-		if result.Error !=nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "Unable to update the user record",
-			})
-			return
-		}
-		c.JSON(200, gin.H{"message": "User reactivated successfully"})
-		return
-	
 	default:
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"message": "Unable to update the user record",
@@ -536,9 +532,9 @@ func ActivateUser(c *gin.Context) {
 
 	}
 
-	}
-	
-// Login 
+}
+
+// Login
 func Login(c *gin.Context) {
 	var user User
 	// receive the request body
@@ -595,21 +591,20 @@ func Login(c *gin.Context) {
 		"jwt":        tokenString,
 		"token_type": "Bearer",
 		"expires_in": 86400, //time in seconds
-		"message": "succesful login",
-		"role":user.Role,
+		"message":    "succesful login",
+		"role":       user.Role,
 	})
 }
 
-// Request Otp 
+// Request Otp
 func RequestOtp(c *gin.Context) {
-	// bind request schema 
+	// bind request schema
 	if c.Bind(&RequestOtpSchema) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Incorrect request schema",
 		})
 		return
 	}
-
 
 	// check if email is registered and fetch user data
 	var user User
@@ -628,11 +623,11 @@ func RequestOtp(c *gin.Context) {
 		return
 	}
 
-	// generate otp and expiry time 
+	// generate otp and expiry time
 	user.OTP = utilities.GenerateOtp()
-	user.OTPExpiresAt = time.Now().Add(time.Minute*5)
-	result:= config.DB.Save(&user)
-	if result.Error !=nil {
+	user.OTPExpiresAt = time.Now().Add(time.Minute * 5)
+	result := config.DB.Save(&user)
+	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Unable to update the user record",
 		})
@@ -694,20 +689,20 @@ func RequestOtp(c *gin.Context) {
 	</body>
 	</html>`, user.OTP)
 
-	subject:= "Reset your password"
+	subject := "Reset your password"
 
-	err := config.SendMail(emailString,htmlBody,subject,user.Email)
+	err := config.SendMail(emailString, htmlBody, subject, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Unable to send mail",
 		})
 		return
 	}
-	
+
 	// send otp -remember this must be changed to mail
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Otp generated succesfully",
-		"otp":user.OTP,
+		"otp":     user.OTP,
 	})
 }
 
@@ -739,8 +734,8 @@ func VerifyOtp(c *gin.Context) {
 	}
 
 	user.OTPVerified = true
-	result:= config.DB.Save(&user)
-	if result.Error !=nil {
+	result := config.DB.Save(&user)
+	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Unable to update the user record",
 		})
@@ -752,7 +747,6 @@ func VerifyOtp(c *gin.Context) {
 	})
 
 }
-
 
 func ChangePassword(c *gin.Context) {
 	// bind the schema
@@ -781,7 +775,6 @@ func ChangePassword(c *gin.Context) {
 		return
 	}
 
-
 	// change and hash password
 	hash, err := bcrypt.GenerateFromPassword([]byte(ChangePasswordSchema.Password), 10)
 	if err != nil {
@@ -795,8 +788,8 @@ func ChangePassword(c *gin.Context) {
 	user.OTPVerified = false
 	user.OTPExpiresAt = time.Now()
 
-	result:= config.DB.Save(&user)
-	if result.Error !=nil {
+	result := config.DB.Save(&user)
+	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "Unable to update the user record",
 		})
@@ -809,63 +802,63 @@ func ChangePassword(c *gin.Context) {
 	})
 }
 
-func CreateMdaUser(tx *gorm.DB, email, password string) (bool,string,uint){
+func CreateMdaUser(tx *gorm.DB, email, password string) (bool, string, uint) {
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-	  return false, "user already exists", 0
+		return false, "user already exists", 0
 	}
-  
+
 	// Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-	  return false, "Unable to hash password", 0
+		return false, "Unable to hash password", 0
 	}
-  
+
 	// Setup the user create instance
 	user := User{
-	  Email: email,
-	  Password: string(hash),
-	  OTPExpiresAt: time.Now(),
-	  Role: 2,
-	  IsActive: true,
+		Email:        email,
+		Password:     string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:         2,
+		IsActive:     true,
 	}
-  
+
 	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
-	  return false, "failed to create user", 0
+		return false, "failed to create user", 0
 	}
-  
+
 	return true, "user created succesfully", user.ID
 }
 
-func CreateStcUser(tx *gorm.DB, email, password string) (bool,string,uint){
+func CreateStcUser(tx *gorm.DB, email, password string) (bool, string, uint) {
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-	  return false, "user already exists", 0
+		return false, "user already exists", 0
 	}
-  
+
 	// Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-	  return false, "Unable to hash password", 0
+		return false, "Unable to hash password", 0
 	}
-  
+
 	// Setup the user create instance
 	user := User{
-	  Email: email,
-	  Password: string(hash),
-	  OTPExpiresAt: time.Now(),
-	  Role: 3,
-	  IsActive: true,
+		Email:        email,
+		Password:     string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:         3,
+		IsActive:     true,
 	}
-  
+
 	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
-	  return false, "failed to create user", 0
+		return false, "failed to create user", 0
 	}
-  
+
 	return true, "user created succesfully", user.ID
 }
 
@@ -873,60 +866,55 @@ func CreateStudentUser(tx *gorm.DB, email, password string) (bool, string, uint)
 	var userCheck User
 	tx.Where("email= ?", email).First(&userCheck) // Use tx for checking email
 	if userCheck.ID != 0 {
-	  return false, "user already exists", 0
+		fmt.Println("Email: ", email)
+		return false, "user already exists", 0
 	}
-  
+
 	// Hash the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-	  return false, "Unable to hash password", 0
+		return false, "Unable to hash password", 0
 	}
 
-  
 	// Setup the user create instance
 	user := User{
-	  Email: email,
-	  Password: string(hash),
-	  OTPExpiresAt: time.Now(),
-	  Role: 4,
-	  IsActive: true,
+		Email:        email,
+		Password:     string(hash),
+		OTPExpiresAt: time.Now(),
+		Role:         4,
+		IsActive:     true,
 	}
-  
+
 	result := tx.Create(&user) // Use tx for user creation
 	if result.Error != nil {
 		fmt.Println(result.Error)
-	  return false, "failed to create user", 0
+		return false, "failed to create user", 0
 	}
-  
+
 	return true, "user created succesfully", user.ID
-  }
-
-
-
-
-
+}
 
 func CreateEmployerUser(tx *gorm.DB, email, password string) (bool, string, uint) {
-    var userCheck User
-    tx.Where("email = ?", email).First(&userCheck)
-    if userCheck.ID != 0 {
-        return false, "user already exists", 0
-    }
+	var userCheck User
+	tx.Where("email = ?", email).First(&userCheck)
+	if userCheck.ID != 0 {
+		return false, "user already exists", 0
+	}
 
-    // Hash the password
- 
-    user := User{
-        Email:        email,
-        Password:     password,
-        OTPExpiresAt: time.Now(),
-        Role:         5,
-        IsActive:     true,
-    }
+	// Hash the password
 
-    result := tx.Create(&user)
-    if result.Error != nil {
-        return false, "failed to create user", 0
-    }
+	user := User{
+		Email:        email,
+		Password:     password,
+		OTPExpiresAt: time.Now(),
+		Role:         5,
+		IsActive:     true,
+	}
 
-    return true, "user created successfully", user.ID
+	result := tx.Create(&user)
+	if result.Error != nil {
+		return false, "failed to create user", 0
+	}
+
+	return true, "user created successfully", user.ID
 }
